@@ -1,0 +1,13 @@
+{
+    "name": "maelstrom",
+    "version": "0.1.0",
+    "private": true,
+    "authors": [
+        "kbirk <birk.kevin@gmail.com>"
+    ],
+    "dependencies": {
+        "alfador": "^0.4.2",
+        "jquery": "^2.1.3",
+        "rolypoly": "^0.3.3"
+    }
+}
