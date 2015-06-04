@@ -20,6 +20,10 @@ var cubeMapTexture;
 var sphere;
 var dynamicCubeMap;
 
+/*
+    Depth pre-pass
+*/
+
 function createFirstPersonMouse( entity ) {
     var mouse = new rolypoly.Mouse();
     // rotate mouse on hold
@@ -120,7 +124,7 @@ function createCubeMapTechnique() {
                     mesh.draw();
                 },
                 after: function() {
-                    dynamicCubeMap.pop( 0 );
+                    cubeMapTexture.pop( 0 );
                     cubeMapShader.pop();
                     gl.enable( gl.CULL_FACE );
                 }
@@ -151,17 +155,17 @@ function createShadowPhongTechnique() {
         width: SHADOW_MAP_SIZE,
         height: SHADOW_MAP_SIZE,
         format: "DEPTH_COMPONENT",
-        type: "UNSIGNED_SHORT"
+        type: "UNSIGNED_INT"
     });
     // create fbo and attach textures
-    var fbo = new esper.FrameBuffer();
-    fbo.setColorTarget( shadowMapTexture );
-    fbo.setDepthTarget( depthTexture );
+    var renderTarget = new esper.RenderTarget();
+    renderTarget.setColorTarget( shadowMapTexture );
+    renderTarget.setDepthTarget( depthTexture );
     // shadow map pass
     var shadowMapPass = new esper.RenderPass({
         before: function() {
-            fbo.push();
-            fbo.clear();
+            renderTarget.push();
+            renderTarget.clear();
             viewport.push( SHADOW_MAP_SIZE, SHADOW_MAP_SIZE );
             shadowShader.push();
             shadowShader.setUniform( 'uLightViewMatrix', light.globalViewMatrix() );
@@ -175,13 +179,13 @@ function createShadowPhongTechnique() {
         },
         after: function() {
             shadowShader.pop();
-            fbo.pop();
+            renderTarget.pop();
+            viewport.pop();
         }
     });
     // phong pass
     var shadowPhongPass = new esper.RenderPass({
         before: function( camera ) {
-            viewport.pop();
             gl.clearColor( 0.2, 0.2, 0.2, 1.0 );
             gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
             shadowPhongShader.push();
@@ -362,7 +366,7 @@ function startApplication() {
             ]
         });
 
-        dynamicCubeMap = new esper.CubeMapFramebuffer({
+        dynamicCubeMap = new esper.CubeMapRenderTarget({
             resolution: 1024,
             mipMap: true
         });

@@ -4,7 +4,6 @@
     "private": true,
     "author": "Kevin Birk <birk.kevin@gmail.com>",
     "dependencies": {
-        "alfador": "^0.4.2",
         "body-parser": "^1.12.3",
         "express": "^4.12.3",
         "gulp": "^3.8.11",
