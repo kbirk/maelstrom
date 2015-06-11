@@ -5,12 +5,93 @@ var gl;
 var camera;
 var renderer;
 var cubeMapShader;
+var starsShader;
 var mouse;
-var background;
-var middleground;
-var foreground;
+var entities = [];
 var viewport;
+var FIELD_OF_VIEW = 60;
+var MIN_Z = 0.1;
+var MAX_Z = 1000;
 var prevFrame = new Date().getTime();
+var stars;
+
+var FRUSTUM_MIN = 1;
+var FRUSTUM_MAX = 1000;
+/*
+    1) Split existing layer:
+        pink_nebula:
+        pink_stars:
+
+        etc..
+
+    2) Apply noise to nebula based on 'distance'
+
+    3) Make stars 'twinkle'
+
+    4) Programmatically add large 'billboard' stars
+
+*/
+
+function generateStars( n ) {
+    var MIN_RADIUS = 1,
+        MAX_RADIUS = 10,
+        positions = new Array( n ),
+        colors = new Array( n ),
+        indices = new Array( n ),
+        range = FRUSTUM_MAX - FRUSTUM_MIN,
+        radius = Math.floor( new alfador.Vec3( 1, 1, 1 ).normalize().x ),
+        min = FRUSTUM_MIN + range * 1 - radius,
+        max = FRUSTUM_MAX - range * 1 - radius,
+        i;
+    for ( i=0; i<n; i++ ) {
+        var rot = alfador.Mat33.rotationDegrees( i/n * 360, [ 0, 1, 0 ] ),
+            a = Math.random() > 0.5 ? 1 : -1,
+            b = Math.random() > 0.5 ? 1 : -1,
+            c = Math.random() > 0.5 ? 1 : -1,
+            d = Math.random() > 0.5 ? 1 : -1,
+            e = Math.random() > 0.5 ? 1 : -1,
+            f = Math.random() > 0.5 ? 1 : -1;
+        positions[i] = rot.mult([
+                a * min + Math.random() * b * max-min,
+                c * min + Math.random() * d * max-min,
+                e * min + Math.random() * f * max-min ] ).toArray();
+        colors[i] = [
+            Math.random()* 0.5 + 0.5,
+            Math.random()* 0.5 + 0.5,
+            Math.random()* 0.5 + 0.5,
+            MIN_RADIUS + ( MAX_RADIUS - MIN_RADIUS ) * Math.random() ];
+        indices[i] = i;
+    }
+    return new esper.Entity({
+        meshes: [
+            new esper.Mesh({
+                renderable: new esper.Renderable({
+                    positions: positions,
+                    colors: colors,
+                    indices: indices,
+                    options: {
+                        mode: 'POINTS'
+                    }
+                }),
+                geometry: new esper.Geometry({
+                    positions: positions,
+                    indices: indices
+                })
+            })
+        ]
+    });
+}
+
+window.addEventListener( 'resize', function() {
+    viewport.height = window.innerHeight;
+    viewport.width = window.innerWidth;
+    camera.projectionMatrix({
+        fov: FIELD_OF_VIEW,
+        aspect: viewport.width / viewport.height,
+        zMin: MIN_Z,
+        zMax: MAX_Z
+    });
+});
 
 function createFirstPersonMouse( entity ) {
     var mouse = new rolypoly.Mouse();
@@ -19,7 +100,7 @@ function createFirstPersonMouse( entity ) {
         var dx = event.clientX - event.previousClientX,
             dy = event.clientY - event.previousClientY;
         if ( mouse.poll('left') === 'down' ) {
-            entity.rotateWorldDegrees( dx * -0.1 , [ 0, 1, 0 ] );
+            entity.rotateLocalDegrees( dx * -0.1 , [ 0, 1, 0 ] );
             entity.rotateLocalDegrees( dy * 0.05, [ 1, 0, 0 ] );
         }
     });
@@ -29,23 +110,32 @@ function createFirstPersonMouse( entity ) {
 function processFrame() {
 
     var currentFrame = new Date().getTime(),
-        delta = currentFrame - prevFrame,
-        foreRot = alfador.Mat33.rotationDegrees( delta/2800, [ 0.1, 0.9, 0.2 ] ),
-        middleRot = alfador.Mat33.rotationDegrees( delta/3500, [ 0.1, 0.8, 0.2 ] ),
-        backRot = alfador.Mat33.rotationDegrees( delta/3700, [ 0.1, 0.7, 0.2 ] );
+        //delta = currentFrame - prevFrame,
+        DEGREES_PER_SECOND = 1,
+        DPS_DROP_IN_SECOND = 1,
+        DPS_DROP_IN_MILLI = DPS_DROP_IN_SECOND / 1000,
+        DEGREES_PER_MILLI = DEGREES_PER_SECOND / 1000;
 
-    foreground.forward( foreRot.mult( foreground.forward() ) );
-    middleground.forward( middleRot.mult( middleground.forward() ) );
-    background.forward( backRot.mult( background.forward() ) );
+    entities.forEach( function( entity, index ) {
+        var axis = [ 0, 1, index / ( entity.length + stars.length ) ], //index / 10 ],
+            rotation = alfador.Mat33.rotationDegrees( ( DEGREES_PER_MILLI * currentFrame ) - ( index * DPS_DROP_IN_MILLI ), axis );
+        entity.forward( rotation.mult( [ 0, 0, 1 ] ) );
+    });
+
+    /*
+    stars.forEach( function( entity, index ) {
+        var axis = [ 0, 1, ( index + entities.length ) / ( entity.length + stars.length ) ],
+            rotation = alfador.Mat33.rotationDegrees( ( DEGREES_PER_MILLI * currentFrame ) - ( ( index + entities.length ) * DPS_DROP_IN_MILLI ), axis );
+        entity.forward( rotation.mult( [ 0, 0, 1 ] ) );
+    });
+    */
 
     // render entities
     renderer.render(
         camera,
         {
-            "cubeMap": [
-                background,
-                middleground,
-                foreground ]
+            "cubeMap": entities,
+            "stars": [ stars ]
         });
 
     prevFrame = currentFrame;
@@ -83,6 +173,33 @@ function createCubeMapTechnique() {
     });
 }
 
+function createStarsTechnique() {
+    return new esper.RenderTechnique({
+        id: "stars",
+        passes: [
+            new esper.RenderPass({
+                before: function( camera ) {
+                    viewport.push();
+                    starsShader.push();
+                    starsShader.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+                    starsShader.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+                    //starsShader.setUniform( 'uDelta', new Date().getTime() );
+                },
+                forEachEntity: function( entity ) {
+                    starsShader.setUniform( 'uModelMatrix', entity.globalMatrix() );
+                },
+                forEachMesh: function( mesh ) {
+                    mesh.draw();
+                },
+                after: function() {
+                    starsShader.pop();
+                    viewport.pop();
+                }
+            })
+        ]
+    });
+}
+
 function createRenderer() {
     // disable backface culling
     gl.disable( gl.CULL_FACE );
@@ -94,15 +211,37 @@ function createRenderer() {
     viewport = new esper.Viewport();
     // create a renderer with a single phong technique
     renderer = new esper.Renderer([
-        createCubeMapTechnique()
+        createCubeMapTechnique(),
+        createStarsTechnique()
     ]);
 }
 
+function loadCubeMap( url ) {
+    var deferred = $.Deferred(),
+        texture = new esper.TextureCubeMap({
+            urls: {
+                '+x': url + '_right1.png',
+                '-x': url + '_left2.png',
+                '+y': url + '_top3.png',
+                '-y': url + '_bottom4.png',
+                '+z': url + '_front5.png',
+                '-z': url + '_back6.png'
+            }
+        }, function() {
+            deferred.resolve( texture );
+        });
+    return deferred;
+}
+
 function startApplication() {
-    var middlegroundTexDeferred = $.Deferred(),
-        backgroundTexDeferred = $.Deferred(),
-        foregroundTexDeferred = $.Deferred(),
-        cubeMapShaderDeferred = $.Deferred();
+    var URLS = [
+            './resources/images/space/stars',
+            './resources/images/space/purple',
+            './resources/images/space/green',
+            './resources/images/space/blue',
+            './resources/images/space/pink'
+        ],
+        deferreds = [];
 
     // get WebGL context, this automatically binds it globally and loads all available extensions
     gl = esper.WebGLContext.get( "glcanvas" );
@@ -111,92 +250,51 @@ function startApplication() {
     if ( gl ) {
         // create camera
         camera = new esper.Camera({
-            origin: [ 0, 5, -20 ],
             projection: {
-                fov: 45,
-                aspect: 4/3,
-                zMin: 0.1,
-                zMax: 1000
+                fov: FIELD_OF_VIEW,
+                aspect: window.innerWidth/window.innerHeight,
+                zMin: MIN_Z,
+                zMax: MAX_Z
             }
         });
         // create mouse input poller
         mouse = createFirstPersonMouse( camera );
 
-        var foregroundTex = new esper.TextureCubeMap({
-            urls: {
-                '+x': './resources/images/cubemaps/0/0_right1.png',
-                '-x': './resources/images/cubemaps/0/0_left2.png',
-                '+y': './resources/images/cubemaps/0/0_top3.png',
-                '-y': './resources/images/cubemaps/0/0_bottom4.png',
-                '+z': './resources/images/cubemaps/0/0_front5.png',
-                '-z': './resources/images/cubemaps/0/0_back6.png'
-            }
-        }, function() {
-            foreground.meshes[0].material.diffuseTexture = foregroundTex;
-            foregroundTexDeferred.resolve();
-        });
-
-        var middlegroundTex = new esper.TextureCubeMap({
-            urls: {
-                '+x': './resources/images/cubemaps/1/1_right1.png',
-                '-x': './resources/images/cubemaps/1/1_left2.png',
-                '+y': './resources/images/cubemaps/1/1_top3.png',
-                '-y': './resources/images/cubemaps/1/1_bottom4.png',
-                '+z': './resources/images/cubemaps/1/1_front5.png',
-                '-z': './resources/images/cubemaps/1/1_back6.png'
-            }
-        }, function() {
-            middleground.meshes[0].material.diffuseTexture = middlegroundTex;
-            middlegroundTexDeferred.resolve();
-        });
-
-        var backgroundTex = new esper.TextureCubeMap({
-            urls: {
-                '+x': './resources/images/cubemaps/2/2_right1.png',
-                '-x': './resources/images/cubemaps/2/2_left2.png',
-                '+y': './resources/images/cubemaps/2/2_top3.png',
-                '-y': './resources/images/cubemaps/2/2_bottom4.png',
-                '+z': './resources/images/cubemaps/2/2_front5.png',
-                '-z': './resources/images/cubemaps/2/2_back6.png'
-            }
-        }, function() {
-            background.meshes[0].material.diffuseTexture = backgroundTex;
-            backgroundTexDeferred.resolve();
-        });
-
-        background = new esper.Entity({
-            scale: 500,
-            meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-        });
-
-        middleground = new esper.Entity({
-            scale: 500,
-            meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-        });
-
-        foreground = new esper.Entity({
-            scale: 500,
-            meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-        });
-
         cubeMapShader = new esper.Shader({
             vert: "./resources/shaders/cubemap.vert",
             frag: "./resources/shaders/cubemap.frag"
         }, function() {
-            cubeMapShaderDeferred.resolve();
+
         });
+
+        starsShader = new esper.Shader({
+            vert: "./resources/shaders/point.vert",
+            frag: "./resources/shaders/point.frag"
+        }, function() {
+
+        });
+
+        URLS.forEach( function( url ) {
+            entities.push(
+                new esper.Entity({
+                    meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
+                }));
+            deferreds.push( loadCubeMap( url ) );
+        });
+
+        stars = generateStars( 10000 );
 
         // create renderer
         createRenderer();
 
         // once everything is ready, begin rendering loop
-        $.when(
-            cubeMapShaderDeferred,
-            middlegroundTexDeferred,
-            foregroundTexDeferred,
-            backgroundTexDeferred).then ( function() {
-                // initiate draw loop
-                processFrame();
+        $.when.apply( $, deferreds ).then ( function() {
+            var textures = arguments;
+            entities.forEach( function( entity, index ) {
+                entity.meshes[0].material.diffuseTexture = textures[ index ];
             });
+            // initiate draw loop
+            processFrame();
+        });
     }
 }
