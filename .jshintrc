@@ -81,6 +81,7 @@
         "$"         : false,
         "alfador"   : false,
         "rolypoly"  : false,
-        "esper"     : false
+        "esper"     : false,
+        "Rainbow"   : false
     }
 }

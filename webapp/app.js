@@ -31,7 +31,7 @@ function createFirstPersonMouse( entity ) {
         var dx = event.clientX - event.previousClientX,
             dy = event.clientY - event.previousClientY;
         if ( mouse.poll('left') === 'down' ) {
-            entity.rotateWorldDegrees( dx * -0.1 , [ 0, 1, 0 ] );
+            entity.rotateWorldDegrees( dx * -0.1, [ 0, 1, 0 ] );
             entity.rotateLocalDegrees( dy * 0.05, [ 1, 0, 0 ] );
         }
     });
@@ -136,7 +136,9 @@ function createCubeMapTechnique() {
 function createShadowPhongTechnique() {
     var SHADOW_MAP_SIZE = 1024*2;
     // create viewport
-    var viewport = new esper.Viewport();
+    var viewport = new esper.Viewport({
+        aspectRatio: 1.5
+    });
     // create bias matrix
     var biasMatrix = new alfador.Mat44([
         0.5, 0.0, 0.0, 0.0,
@@ -299,8 +301,8 @@ function startApplication() {
             projection: {
                 fov: 45,
                 aspect: 4/3,
-                zMin: 0.1,
-                zMax: 1000
+                zMin: FRUSTUM_MIN,
+                zMax: FRUSTUM_MAX
             }
         });
         // create mouse input poller
