@@ -128,11 +128,10 @@ function createFirstPersonMouse( entity ) {
 
 function rotateEntity( timestamp, entity, index ) {
     var DEGREES_PER_SECOND = 1,
-        DPS_DROP_IN_SECOND = 0.5,
-        DPS_DROP_IN_MILLI = DPS_DROP_IN_SECOND / 1000,
+        DPS_INC_IN_SECOND = 10,
         DEGREES_PER_MILLI = DEGREES_PER_SECOND / 1000,
-        axis = [ 0, 1, index * 0.001 ],
-        rotation = alfador.Mat33.rotationDegrees( ( DEGREES_PER_MILLI * timestamp ) + ( index * DPS_DROP_IN_MILLI ), axis );
+        axis = [ 0, 1, 0 ],
+        rotation = alfador.Mat33.rotationDegrees( ( DEGREES_PER_MILLI * timestamp ) + ( DPS_INC_IN_SECOND * index ), axis );
     entity.forward( rotation.mult( [ 0, 0, 1 ] ) );
 }
 
@@ -144,13 +143,14 @@ function processFrame() {
         rotateEntity( time, entity, index );
     });
 
-    stars.forEach( function( entity, index ) {
-        rotateEntity( time, entity, index+staticStars.length );
+    nebula.forEach( function( entity, index ) {
+        rotateEntity( time, entity, index );
     });
 
-    nebula.forEach( function( entity, index ) {
-        rotateEntity( time, entity, index+staticStars.length+stars.length );
+    stars.forEach( function( entity, index ) {
+        rotateEntity( time, entity, index );
     });
+
 
     // render entities
     renderer.render(
@@ -293,16 +293,16 @@ function loadCubeMap( url ) {
 
 function startApplication() {
     var NEBULA_URLS = [
+            './resources/images/space/pink',
             './resources/images/space/purple',
             './resources/images/space/green',
-            './resources/images/space/blue',
-            './resources/images/space/pink'
+            './resources/images/space/blue'
         ],
         STAR_URLS = [
+            './resources/images/space/red_stars',
             './resources/images/space/purple_stars',
             './resources/images/space/green_stars',
-            './resources/images/space/blue_stars',
-            './resources/images/space/red_stars',
+            './resources/images/space/blue_stars'
         ],
         SHADER_URLS = [
             {
