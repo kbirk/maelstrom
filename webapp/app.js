@@ -4,101 +4,166 @@
 var gl;
 var camera;
 var renderer;
-var shadowShader;
-var shadowPhongShader;
-var cubeMapShader;
-var flatShader;
 var mouse;
-var keyboard;
-var light;
-var sponza;
-var teapot;
-var arrow;
-var rambler;
-var cube;
-var cubeMapTexture;
-var sphere;
-var dynamicCubeMap;
+var viewport;
+var FIELD_OF_VIEW = 60;
+var MIN_Z = 0.1;
+var MAX_Z = 1000;
+var startTime = new Date().getTime();
+var prevTime = startTime;
+var time = null;
+var stars = [];
+var nebula = [];
+var staticStars = [];
+var starTexture;
+var shaders = {};
 
-/*
-    Depth pre-pass
-*/
+var FRUSTUM_MIN = 1;
+var FRUSTUM_MAX = 1000;
 
-function createFirstPersonMouse( entity ) {
+function randomLog() {
+    return 1 - Math.pow( Math.random(), 40 );
+}
+
+function hexToRgb( hex ) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+function generateStars( n, minRadius, maxRadius, colorSpectrum ) {
+
+    var rainbow = new Rainbow();
+        rainbow.setSpectrum.apply( rainbow, colorSpectrum || [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] );
+        rainbow.setNumberRange( 0, 1 );
+
+    var MIN_RADIUS = minRadius || 5,
+        MAX_RADIUS = maxRadius || 100,
+        positions = new Array( n ),
+        colors = new Array( n ),
+        indices = new Array( n ),
+        min = FRUSTUM_MIN,
+        range = ( FRUSTUM_MAX - FRUSTUM_MIN ),
+        i;
+    for ( i=0; i<n; i++ ) {
+        var a = Math.random() > 0.5 ? 1 : -1,
+            b = Math.random() > 0.5 ? 1 : -1,
+            c = Math.random() > 0.5 ? 1 : -1,
+            epsilon = range * 0.1,
+            rand = randomLog(),
+            distance = ( min + epsilon ) +  rand * ( range - epsilon ),
+            radius = MIN_RADIUS + ( MAX_RADIUS - MIN_RADIUS ) * ( 1 - rand );
+        positions[i] = new alfador.Vec3(
+            a * Math.random(),
+            b * Math.random(),
+            c * Math.random() ).length( distance );
+        var rgb = hexToRgb( rainbow.colorAt( Math.random() ) );
+        colors[i] = [
+            rgb.r / 255,
+            rgb.g / 255,
+            rgb.b / 255,
+            Math.round( radius ) ];
+        indices[i] = i;
+    }
+    return new esper.Entity({
+        meshes: [
+            new esper.Mesh({
+                renderable: new esper.Renderable({
+                    positions: positions,
+                    colors: colors,
+                    indices: indices,
+                    options: {
+                        mode: 'POINTS'
+                    }
+                }),
+                geometry: new esper.Geometry({
+                    positions: positions,
+                    indices: indices
+                })
+            })
+        ]
+    });
+}
+
+window.addEventListener( 'resize', function() {
+    viewport.height = window.innerHeight;
+    viewport.width = window.innerWidth;
+    camera.projectionMatrix({
+        fov: FIELD_OF_VIEW,
+        aspect: viewport.width / viewport.height,
+        zMin: MIN_Z,
+        zMax: MAX_Z
+    });
+});
+
+var verticalRotation = 0;
+var horizontalRotation = 0;
+
+function createFirstPersonMouse() {
     var mouse = new rolypoly.Mouse();
     // rotate mouse on hold
     mouse.on( 'move', function( event ) {
         var dx = event.clientX - event.previousClientX,
             dy = event.clientY - event.previousClientY;
         if ( mouse.poll('left') === 'down' ) {
-            entity.rotateWorldDegrees( dx * -0.1, [ 0, 1, 0 ] );
-            entity.rotateLocalDegrees( dy * 0.05, [ 1, 0, 0 ] );
+            verticalRotation += dx / 1000;
+            horizontalRotation += dy / 1000;
         }
     });
     return mouse;
 }
 
-function pollKeyboard( keyboard, entity ) {
-    // on poll, clear the translation vector
-    var translation = new alfador.Vec3( 0, 0, 0 ),
-        keys = keyboard.poll( ['w','a','s','d'] );
-    if ( keys.w === 'down' ) {
-        translation = translation.add( [ 0, 0, 1 ] );
-    }
-    if ( keys.a === 'down' ) {
-        translation = translation.add( [ 1, 0, 0 ] );
-    }
-    if ( keys.s === 'down' ) {
-        translation = translation.add( [ 0, 0, -1 ] );
-    }
-    if ( keys.d === 'down' ) {
-        translation = translation.add( [ -1, 0, 0 ] );
-    }
-    entity.translateLocal( translation.normalize() );
+function rotateEntity( timestamp, entity, index ) {
+    var DEGREES_PER_SECOND = 1,
+        DPS_INC_IN_SECOND = 10,
+        DEGREES_PER_MILLI = DEGREES_PER_SECOND / 1000,
+        axis = [ 0, 1, 0 ],
+        rotation = alfador.Mat33.rotationDegrees( ( DEGREES_PER_MILLI * timestamp ) + ( DPS_INC_IN_SECOND * index ), axis );
+    entity.forward( rotation.mult( [ 0, 0, 1 ] ) );
 }
 
 function processFrame() {
 
-    var timeStamp = new Date().getTime();
+    time = new Date().getTime() - startTime;
+    var delta = time - prevTime;
 
-    light.origin([ -100, 100, 20 * Math.sin( timeStamp/5000 ) ]);
-    light.forward([ 0, -1, 0 ]);
-    light.forward([ 0.8, -1, 0 ]);
+    staticStars.forEach( function( entity, index ) {
+        rotateEntity( time, entity, index );
+    });
 
-    // poll keyboard input
-    pollKeyboard( keyboard, camera );
+    nebula.forEach( function( entity, index ) {
+        rotateEntity( time, entity, index );
+    });
 
-    // dynamic cube map generation
-    dynamicCubeMap.render(
-        sphere.origin(),
-        renderer,
-        {
-            "shadowPhong": [ teapot, sponza, sphere, rambler ],
-            "flat": [ arrow ],
-            "cubeMap": [ cube ]
-        });
+    stars.forEach( function( entity, index ) {
+        rotateEntity( time, entity, index );
+    });
+
+    camera.rotateLocalDegrees( delta/10 * -verticalRotation , [ 0, 1, 0 ] );
+    camera.rotateLocalDegrees( delta/10 * horizontalRotation , [ 1, 0, 0 ] );
+
+    verticalRotation = verticalRotation * 0.97;
+    horizontalRotation = horizontalRotation * 0.97;
+    if ( Math.abs( verticalRotation ) < 0.0001 ) {
+        verticalRotation = 0;
+    }
+    if ( Math.abs( horizontalRotation ) < 0.0001 ) {
+        horizontalRotation = 0;
+    }
 
     // render entities
     renderer.render(
         camera,
         {
-            "shadowPhong": [ teapot, sponza, sphere, rambler ],
-            "flat": [ arrow ],
-            "cubeMap": [ cube ]
+            "cubeMap": staticStars,
+            "nebula": nebula,
+            "stars": stars
         });
 
-    esper.Debug.setCamera( camera );
-
-    //esper.Debug.drawWireFrame( teapot );
-
-    //esper.Debug.drawNormalsAsColor( teapot );
-    //esper.Debug.drawUVsAsVectors( sphere, [0, 1, 0] );
-
-    //esper.Debug.drawNormalsAsVectors( teapot, [1, 0, 0] );
-    //esper.Debug.drawTangentsAsVectors( sphere, [0, 1, 0] );
-    //esper.Debug.drawBiTangentsAsVectors( sphere, [0, 0, 1] );
-
-    //esper.Debug.drawTexture( texture );
+    prevTime = time;
 
     // redraw when browser is ready
     requestAnimationFrame( processFrame );
@@ -110,155 +175,86 @@ function createCubeMapTechnique() {
         passes: [
             new esper.RenderPass({
                 before: function( camera ) {
-                    gl.disable( gl.CULL_FACE );
-                    cubeMapShader.push();
-                    cubeMapShader.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-                    cubeMapShader.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
-                    cubeMapShader.setUniform( 'uCubeMapSampler', 0 );
-                    cubeMapTexture.push( 0 );
+                    viewport.push();
+                    shaders.cubeMap.push();
+                    shaders.cubeMap.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+                    shaders.cubeMap.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+                    shaders.cubeMap.setUniform( 'uCubeMapSampler', 0 );
                 },
                 forEachEntity: function( entity ) {
-                    cubeMapShader.setUniform( 'uModelMatrix', entity.globalMatrix() );
+                    shaders.cubeMap.setUniform( 'uModelMatrix', entity.globalMatrix() );
                 },
                 forEachMesh: function( mesh ) {
+                    mesh.material.diffuseTexture.push( 0 );
                     mesh.draw();
+                    mesh.material.diffuseTexture.pop( 0 );
                 },
                 after: function() {
-                    cubeMapTexture.pop( 0 );
-                    cubeMapShader.pop();
-                    gl.enable( gl.CULL_FACE );
+                    shaders.cubeMap.pop();
+                    viewport.pop();
                 }
             })
         ]
     });
 }
 
-function createShadowPhongTechnique() {
-    var SHADOW_MAP_SIZE = 1024*2;
-    // create viewport
-    var viewport = new esper.Viewport({
-        aspectRatio: 1.5
-    });
-    // create bias matrix
-    var biasMatrix = new alfador.Mat44([
-        0.5, 0.0, 0.0, 0.0,
-        0.0, 0.5, 0.0, 0.0,
-        0.0, 0.0, 0.5, 0.0,
-        0.5, 0.5, 0.5, 1.0 ]);
-    // shadow map tex
-    var shadowMapTexture = new esper.Texture2D({
-        width: SHADOW_MAP_SIZE,
-        height: SHADOW_MAP_SIZE,
-        format: "RGBA",
-        type: "UNSIGNED_BYTE"
-    });
-    // depth tex
-    var depthTexture = new esper.Texture2D({
-        width: SHADOW_MAP_SIZE,
-        height: SHADOW_MAP_SIZE,
-        format: "DEPTH_COMPONENT",
-        type: "UNSIGNED_INT"
-    });
-    // create fbo and attach textures
-    var renderTarget = new esper.RenderTarget();
-    renderTarget.setColorTarget( shadowMapTexture );
-    renderTarget.setDepthTarget( depthTexture );
-    // shadow map pass
-    var shadowMapPass = new esper.RenderPass({
-        before: function() {
-            renderTarget.push();
-            renderTarget.clear();
-            viewport.push( SHADOW_MAP_SIZE, SHADOW_MAP_SIZE );
-            shadowShader.push();
-            shadowShader.setUniform( 'uLightViewMatrix', light.globalViewMatrix() );
-            shadowShader.setUniform( 'uLightProjectionMatrix', light.projectionMatrix() );
-        },
-        forEachEntity: function( entity ) {
-            shadowShader.setUniform( 'uModelMatrix', entity.globalMatrix() );
-        },
-        forEachMesh: function( mesh ) {
-            mesh.draw();
-        },
-        after: function() {
-            shadowShader.pop();
-            renderTarget.pop();
-            viewport.pop();
-        }
-    });
-    // phong pass
-    var shadowPhongPass = new esper.RenderPass({
-        before: function( camera ) {
-            gl.clearColor( 0.2, 0.2, 0.2, 1.0 );
-            gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-            shadowPhongShader.push();
-            shadowPhongShader.setUniform( 'uLightViewMatrix', light.globalViewMatrix() );
-            shadowPhongShader.setUniform( 'uLightProjectionMatrix', light.projectionMatrix() );
-            shadowPhongShader.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-            shadowPhongShader.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
-            shadowPhongShader.setUniform( 'uInverseViewMatrix', camera.globalViewMatrix().inverse() );
-            shadowPhongShader.setUniform( 'uLightPosition', light.origin() );
-            shadowPhongShader.setUniform( 'uBiasMatrix', biasMatrix );
-            shadowPhongShader.setUniform( 'uShadowSampler', 0 );
-            shadowPhongShader.setUniform( 'uDiffuseTextureSampler', 1 );
-            shadowPhongShader.setUniform( 'uCubeMapSampler', 2 );
-            shadowMapTexture.push( 0 );
-            dynamicCubeMap.push( 2 );
-        },
-        forEachEntity: function( entity ) {
-            shadowPhongShader.setUniform( 'uModelMatrix', entity.globalMatrix() );
-        },
-        forEachMesh: function( mesh ) {
-            var material = mesh.material;
-            shadowPhongShader.setUniform( 'uReflection', material.reflection );
-            shadowPhongShader.setUniform( 'uRefraction', material.refraction );
-            shadowPhongShader.setUniform( 'uSpecularColor', material.specularColor );
-            shadowPhongShader.setUniform( 'uSpecularComponent', material.specularComponent );
-            if ( material.diffuseTexture ) {
-                material.diffuseTexture.push( 1 );
-                shadowPhongShader.setUniform( 'uUseTexture', true );
-            } else {
-                shadowPhongShader.setUniform( 'uDiffuseColor', material.diffuseColor );
-                shadowPhongShader.setUniform( 'uUseTexture', false );
-            }
-            mesh.draw();
-            if ( material.diffuseTexture ) {
-                material.diffuseTexture.pop( 1 );
-            }
-        },
-        after: function() {
-            shadowMapTexture.pop( 0 );
-            dynamicCubeMap.pop( 2 );
-            shadowPhongShader.pop();
-        }
-    });
+function createNebulaTechnique() {
+    var index;
     return new esper.RenderTechnique({
-        id: "shadowPhong",
+        id: "nebula",
         passes: [
-            shadowMapPass,
-            shadowPhongPass
+            new esper.RenderPass({
+                before: function( camera ) {
+                    viewport.push();
+                    shaders.nebula.push();
+                    shaders.nebula.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+                    shaders.nebula.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+                    shaders.nebula.setUniform( 'uDelta', time / 1000 );
+                    shaders.nebula.setUniform( 'uCubeMapSampler', 0 );
+                    index = 0;
+                },
+                forEachEntity: function( entity ) {
+                    shaders.nebula.setUniform( 'uModelMatrix', entity.globalMatrix() );
+                },
+                forEachMesh: function( mesh ) {
+                    mesh.material.diffuseTexture.push( 0 );
+                    shaders.nebula.setUniform( 'uIndex', index++ );
+                    mesh.draw();
+                    mesh.material.diffuseTexture.pop( 0 );
+                },
+                after: function() {
+                    shaders.nebula.pop();
+                    viewport.pop();
+                }
+            })
         ]
     });
 }
 
-function createFlatTechnique() {
+function createStarsTechnique() {
     return new esper.RenderTechnique({
-        id: "flat",
+        id: "stars",
         passes: [
             new esper.RenderPass({
                 before: function( camera ) {
-                    flatShader.push();
-                    flatShader.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-                    flatShader.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+                    viewport.push();
+                    shaders.stars.push();
+                    shaders.stars.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+                    shaders.stars.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+                    shaders.stars.setUniform( 'uPointSampler', 0 );
+                    shaders.stars.setUniform( 'uDelta', time / 1000 );
+                    starTexture.push( 0 );
                 },
                 forEachEntity: function( entity ) {
-                    flatShader.setUniform( 'uModelMatrix', entity.globalMatrix() );
+                    shaders.stars.setUniform( 'uModelMatrix', entity.globalMatrix() );
                 },
                 forEachMesh: function( mesh ) {
-                    flatShader.setUniform( 'uFlatColor', mesh.material.diffuseColor );
                     mesh.draw();
                 },
                 after: function() {
-                    flatShader.pop();
+                    starTexture.pop( 0 );
+                    shaders.stars.pop();
+                    viewport.pop();
                 }
             })
         ]
@@ -266,29 +262,64 @@ function createFlatTechnique() {
 }
 
 function createRenderer() {
-    // enable backface culling
-    gl.enable( gl.CULL_FACE );
-    gl.cullFace( gl.BACK );
-    // enable depth testing
-    gl.enable( gl.DEPTH_TEST );
-    gl.depthFunc( gl.LEQUAL );
+    // disable backface culling
+    gl.disable( gl.CULL_FACE );
+    // disable depth testing
+    gl.disable( gl.DEPTH_TEST );
+    // enable blending
+    gl.enable( gl.BLEND );
+    gl.blendFunc( gl.ONE, gl.ONE );
+    viewport = new esper.Viewport();
     // create a renderer with a single phong technique
     renderer = new esper.Renderer([
-        createShadowPhongTechnique(),
-        createFlatTechnique(),
-        createCubeMapTechnique()
+        createCubeMapTechnique(),
+        createStarsTechnique(),
+        createNebulaTechnique()
     ]);
 }
 
+function loadCubeMap( url ) {
+    var deferred = $.Deferred(),
+        texture = new esper.TextureCubeMap({
+            urls: {
+                '+x': url + '_right1.png',
+                '-x': url + '_left2.png',
+                '+y': url + '_top3.png',
+                '-y': url + '_bottom4.png',
+                '+z': url + '_front5.png',
+                '-z': url + '_back6.png'
+            }
+        }, function() {
+            deferred.resolve( texture );
+        });
+    return deferred;
+}
+
 function startApplication() {
-    var sponzaDeferred = $.Deferred(),
-        ramblerDeferred = $.Deferred(),
-        teapotDeferred = $.Deferred(),
-        shadowShaderDeferred = $.Deferred(),
-        shadowPhongShaderDeferred = $.Deferred(),
-        flatShaderDeferred = $.Deferred(),
-        cubeTextureDeferred = $.Deferred(),
-        cubeMapShaderDeferred = $.Deferred();
+    var NEBULA_URLS = [
+            './resources/images/space/cold',
+            './resources/images/space/hot'
+        ],
+        STAR_URLS = [
+            './resources/images/space/cold_stars'
+        ],
+        SHADER_URLS = [
+            {
+                id: "cubeMap",
+                vert: "./resources/shaders/cubemap.vert",
+                frag: "./resources/shaders/cubemap.frag"
+            },
+            {
+                id: "stars",
+                vert: "./resources/shaders/point.vert",
+                frag: "./resources/shaders/point.frag"
+            },
+            {
+                id: "nebula",
+                vert: "./resources/shaders/nebula.vert",
+                frag: "./resources/shaders/nebula.frag"
+            },
+        ];
 
     // get WebGL context, this automatically binds it globally and loads all available extensions
     gl = esper.WebGLContext.get( "glcanvas" );
@@ -297,142 +328,67 @@ function startApplication() {
     if ( gl ) {
         // create camera
         camera = new esper.Camera({
-            origin: [ 0, 5, -20 ],
             projection: {
-                fov: 45,
-                aspect: 4/3,
-                zMin: FRUSTUM_MIN,
-                zMax: FRUSTUM_MAX
+                fov: FIELD_OF_VIEW,
+                aspect: window.innerWidth/window.innerHeight,
+                zMin: MIN_Z,
+                zMax: MAX_Z
             }
         });
         // create mouse input poller
-        mouse = createFirstPersonMouse( camera );
-        // create keyboard input poller
-        keyboard = new rolypoly.Keyboard();
-        // create light
-        light = new esper.Camera({
-            origin: [ 0, 10, -10 ],
-            projection: {
-                fov: 90,
-                aspect: 1,
-                zMin: 1,
-                zMax: 1000
-            }
+        mouse = createFirstPersonMouse();
+
+        var deferreds = [];
+        SHADER_URLS.forEach( function( url ) {
+            var d = $.Deferred();
+            shaders[ url.id ] = new esper.Shader( url, function() {
+                d.resolve();
+            });
+            deferreds.push( d );
         });
 
-        // load sponza model
-        esper.OBJMTLLoader.load( 'resources/models/obj/sponza/sponza.obj', function( model ) {
-            sponza = new esper.Entity( model );
-            sponza.scale( 10 );
-            sponzaDeferred.resolve();
-        });
-        // load teapot
-        esper.OBJMTLLoader.load( 'resources/models/obj/tree/tree.obj', function( model ) {
-            teapot = new esper.Entity( model );
-            //var octree = new esper.Octree( model.meshes[0].triangles.concat( model.meshes[1].triangles ) );
-            teapot.scale( 3.0 );
-            teapot.origin( [ -40, 0, 0 ] );
-            //teapot.addChild( octree.getEntity() );
-            teapotDeferred.resolve();
-        });
-        esper.OBJMTLLoader.load( 'resources/models/obj/arrow/arrow.obj', function( model ) {
-            arrow = new esper.Entity( model );
-            arrow.forward( [ -1, 0, 0 ] );
-            light.addChild( arrow );
-        });
-        esper.glTFLoader.load( './resources/models/gltf/duck/duck.gltf', function( model ) {
-            rambler = model;
-            rambler.scale( 5 );
-            rambler.origin( [ 40, 0.5, 0 ] );
-            //rambler.up( [ 0, -1, 0 ] );
-            ramblerDeferred.resolve();
-        });
-
-        cubeMapTexture = new esper.TextureCubeMap({
-            urls: {
-                '+x': './resources/images/posx.jpg',
-                '-x': './resources/images/negx.jpg',
-                '+y': './resources/images/posy.jpg',
-                '-y': './resources/images/negy.jpg',
-                '+z': './resources/images/posz.jpg',
-                '-z': './resources/images/negz.jpg'
-            }
-        }, function() {
-            cubeTextureDeferred.resolve();
-        });
-
-        cube = new esper.Entity({
-            scale: 500,
-            meshes: [
-                new esper.Mesh( esper.Cube.geometry() )
-            ]
-        });
-
-        dynamicCubeMap = new esper.CubeMapRenderTarget({
-            resolution: 1024,
-            mipMap: true
-        });
-
-        sphere = new esper.Entity({
-            scale: 5,
-            origin: [ 20, 6, 0 ],
-            meshes: [
-                new esper.Mesh( esper.Sphere.geometry( 20, 20, 1 ) )
-            ]
-        });
-        sphere.meshes[0].material.diffuseColor = [ 0.0, 1.0, 0.2, 1.0 ];
-        sphere.meshes[0].material.reflection = 0.3;
-        sphere.meshes[0].material.transparency = 0.0;
-        sphere.meshes[0].material.specularComponent = 100;
-
-        /*
-        var texture = new esper.Texture2D({
-            url: './resources/images/uvTest.png'
-        }, function( texture ) {
-            sphere.meshes[0].material = new esper.Material({
-                diffuseTexture: texture
+        NEBULA_URLS.forEach( function( url ) {
+            var d = loadCubeMap( url );
+            $.when( d ).then( function( texture ) {
+                var n = new esper.Entity({
+                    scale: 10,
+                    meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
+                });
+                n.meshes[0].material.diffuseTexture = texture;
+                nebula.push( n );
             });
         });
-        */
 
-        // load, compile, and link shader programs
-        shadowShader = new esper.Shader({
-            vert: "resources/shaders/shadow.vert",
-            frag: "resources/shaders/shadow.frag"
-        }, function() {
-            shadowShaderDeferred.resolve();
+        STAR_URLS.forEach( function( url ) {
+            var star = new esper.Entity({
+                    scale: 10,
+                    meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
+                });
+            var d = loadCubeMap( url );
+            $.when( d ).then( function( texture ) {
+                star.meshes[0].material.diffuseTexture = texture;
+                staticStars.push( star );
+            });
         });
-        shadowPhongShader = new esper.Shader({
-            vert: "resources/shaders/shadowPhong.vert",
-            frag: "resources/shaders/shadowPhong.frag"
-        }, function() {
-            shadowPhongShaderDeferred.resolve();
-        });
-        flatShader = new esper.Shader({
-            vert: "resources/shaders/flat.vert",
-            frag: "resources/shaders/flat.frag"
-        }, function() {
-            flatShaderDeferred.resolve();
-        });
-        cubeMapShader = new esper.Shader({
-            vert: "./resources/shaders/cubemap.vert",
-            frag: "./resources/shaders/cubemap.frag"
-        }, function() {
-            cubeMapShaderDeferred.resolve();
-        });
+
         // create renderer
         createRenderer();
+
+        var d = $.Deferred();
+        starTexture = new esper.Texture2D({
+            url: "./resources/images/space/star.png"
+        }, function() {
+            stars.push( generateStars( 10000 ) );
+            stars.push( generateStars( 20000, 3, 5, [ "7C063D", "5A0649", "332343" ] ) );
+            d.resolve();
+        });
+        deferreds.push( d );
+
         // once everything is ready, begin rendering loop
-        $.when( sponzaDeferred,
-            ramblerDeferred,
-            teapotDeferred,
-            shadowShaderDeferred,
-            shadowPhongShaderDeferred,
-            flatShaderDeferred,
-            cubeMapShaderDeferred,
-            cubeTextureDeferred ).then ( function() {
-                // initiate draw loop
-                processFrame();
-            });
+        $.when.apply( $, deferreds ).then ( function() {
+            // initiate draw loop
+            processFrame();
+        });
+
     }
 }
