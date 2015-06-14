@@ -297,27 +297,27 @@ function loadCubeMap( url ) {
 
 function startApplication() {
     var NEBULA_URLS = [
-            './resources/images/space/cold',
-            './resources/images/space/hot'
+            './images/cold',
+            './images/hot'
         ],
         STAR_URLS = [
-            './resources/images/space/cold_stars'
+            './images/cold_stars'
         ],
         SHADER_URLS = [
             {
                 id: "cubeMap",
-                vert: "./resources/shaders/cubemap.vert",
-                frag: "./resources/shaders/cubemap.frag"
+                vert: "./shaders/cubemap.vert",
+                frag: "./shaders/cubemap.frag"
             },
             {
                 id: "stars",
-                vert: "./resources/shaders/point.vert",
-                frag: "./resources/shaders/point.frag"
+                vert: "./shaders/point.vert",
+                frag: "./shaders/point.frag"
             },
             {
                 id: "nebula",
-                vert: "./resources/shaders/nebula.vert",
-                frag: "./resources/shaders/nebula.frag"
+                vert: "./shaders/nebula.vert",
+                frag: "./shaders/nebula.frag"
             },
         ];
 
@@ -376,7 +376,7 @@ function startApplication() {
 
         var d = $.Deferred();
         starTexture = new esper.Texture2D({
-            url: "./resources/images/space/star.png"
+            url: "./images/star.png"
         }, function() {
             stars.push( generateStars( 10000 ) );
             stars.push( generateStars( 20000, 3, 5, [ "7C063D", "5A0649", "332343" ] ) );
