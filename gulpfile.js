@@ -32,11 +32,11 @@
             .pipe( jshint.reporter('jshint-stylish') );
     });
 
-    gulp.task('build-min-js', [ 'lint' ], function() {
+    gulp.task('build-min-js', function() {
         uglify = uglify || require('gulp-uglify');
         return gulp.src( paths.js )
             .pipe( concat('maelstrom.min.js') )
-            .pipe( uglify().on('error', function(e){console.log(e);}) )
+            //.pipe( uglify().on('error', function(e){console.log(e);}) )
             .pipe( gulp.dest('build') );
     });
 
@@ -115,7 +115,7 @@
         return app;
     });
 
-    gulp.task('build', [ 'clean' ], function() {
+    gulp.task('build', [ 'clean', 'lint' ], function() {
         gulp.start( 'build-min-js' );
         gulp.start( 'build-min-css' );
         gulp.start( 'build-min-html' );

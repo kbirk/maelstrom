@@ -10,6 +10,6 @@
         "esper": "^0.1.1",
         "jquery": "^2.1.3",
         "rainbowvis.js": "https://raw.githubusercontent.com/anomal/RainbowVis-JS/master/rainbowvis.js",
-        "rolypoly": "^0.3.3"
+        "rolypoly": "^0.3.4"
     }
 }
