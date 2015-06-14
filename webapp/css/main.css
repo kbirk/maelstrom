@@ -6,7 +6,6 @@ body {
     margin: 0;
     font-family: 'Share Tech', sans-serif;
     font-weight: 400;
-    font-size: 16px;
     color: #FFF;
     -moz-user-select: none;
     -webkit-user-select: none;
@@ -23,9 +22,6 @@ canvas {
     bottom: 0;
     left: 0;
     right: 0;
-    font: inherit;
-    font-size: 100%;
-    vertical-align: baseline;
 }
 
 header,
@@ -38,7 +34,7 @@ footer {
 
 header {
     top:0;
-    line-height: 30px;
+    line-height: 30pt;
     text-shadow:
         -1px -1px 0 #000,
         1px -1px 0 #000,
@@ -51,16 +47,15 @@ header {
 }
 
 header > h1 {
-    font-size: 30px;
+    font-size: 30pt;
 }
 header > h2 {
-    font-size: 20px;
+    font-size: 20pt;
 }
 
 .icon {
     padding-right: 8px;
-    font-size: 24px;
-    line-height: 24px;
+    font-size: 24pt;
     color: #FFF;
     text-decoration: none;
 }

@@ -36,7 +36,7 @@
         uglify = uglify || require('gulp-uglify');
         return gulp.src( paths.js )
             .pipe( concat('maelstrom.min.js') )
-            //.pipe( uglify().on('error', function(e){console.log(e);}) )
+            .pipe( uglify().on('error', function(e){console.log(e);}) )
             .pipe( gulp.dest('build') );
     });
 

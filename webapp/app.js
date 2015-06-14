@@ -121,10 +121,10 @@
         return mouse;
     }
 
-    function rotateEntity( timestamp, entity ) {
+    function rotateEntity( entity ) {
         var DEGREES_PER_MILLI = entity.velocity / 1000,
             axis = [ 0, 1, 0 ],
-            rotation = alfador.Mat33.rotationDegrees( DEGREES_PER_MILLI * timestamp, axis );
+            rotation = alfador.Mat33.rotationDegrees( DEGREES_PER_MILLI * time, axis );
         entity.forward( rotation.mult( [ 0, 0, 1 ] ) );
     }
 
@@ -134,17 +134,17 @@
         delta = time - prevTime;
 
         staticStars.forEach( function( entity ) {
-            rotateEntity( time, entity );
+            rotateEntity( entity );
             entity.opacity = Math.min( 1, entity.opacity + 0.01  );
         });
 
         nebulas.forEach( function( entity ) {
-            rotateEntity( time, entity );
+            rotateEntity( entity );
             entity.opacity = Math.min( 1, entity.opacity + 0.01 );
         });
 
         stars.forEach( function( entity ) {
-            rotateEntity( time, entity );
+            rotateEntity( entity );
             entity.opacity = Math.min( 1, entity.opacity + 0.01 );
         });
 
@@ -373,8 +373,8 @@
     window.startApplication = function() {
         var VELOCITY = {
                 SLOW: 1,
-                MEDIUM: 1.2,
-                FAST: 1.4
+                MEDIUM: 1.1,
+                FAST: 1.2
             },
             NEBULAS = [
                 {
