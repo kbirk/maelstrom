@@ -2,14 +2,49 @@
 
     "use strict";
 
-    var gl;
-    var camera;
-    var renderer;
-    var mouse;
-    var viewport;
     var FIELD_OF_VIEW = 60;
     var MIN_Z = 0.1;
     var MAX_Z = 1000;
+    var VELOCITY = {
+        SLOW: 1,
+        MEDIUM: 1.1,
+        FAST: 1.2
+    };
+    var NEBULAS = [
+        {
+            url: './images/cold',
+            velocity: VELOCITY.FAST
+        },
+        {
+            url: './images/hot',
+            velocity: VELOCITY.SLOW
+        }
+    ];
+    var STARS = [
+        {
+            url: './images/cold_stars',
+            velocity: VELOCITY.FAST
+        }
+    ];
+    var SHADERS = [
+        {
+            id: "cubeMap",
+            vert: "./shaders/cubemap.vert",
+            frag: "./shaders/cubemap.frag"
+        },
+        {
+            id: "stars",
+            vert: "./shaders/point.vert",
+            frag: "./shaders/point.frag"
+        },
+        {
+            id: "nebula",
+            vert: "./shaders/nebula.vert",
+            frag: "./shaders/nebula.frag"
+        }
+    ];
+    var verticalRotation = 0;
+    var horizontalRotation = 0;
     var startTime = new Date().getTime();
     var prevTime = 0;
     var time = 0;
@@ -19,9 +54,11 @@
     var staticStars = [];
     var starTexture;
     var shaders = {};
-
-    var FRUSTUM_MIN = 1;
-    var FRUSTUM_MAX = 1000;
+    var gl;
+    var camera;
+    var renderer;
+    var mouse;
+    var viewport;
 
     function randomLog() {
         return 1 - Math.pow( Math.random(), 40 );
@@ -37,19 +74,18 @@
     }
 
     function generateStars( n, velocity, minRadius, maxRadius, colorSpectrum ) {
-
-        var rainbow = new Rainbow();
-            rainbow.setSpectrum.apply( rainbow, colorSpectrum || [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] );
-            rainbow.setNumberRange( 0, 1 );
-
-        var MIN_RADIUS = minRadius || 5,
-            MAX_RADIUS = maxRadius || 100,
+        var rainbow = new Rainbow(),
+            STAR_MIN = 1,
+            STAR_MAX = 1000,
             positions = new Array( n ),
             colors = new Array( n ),
             indices = new Array( n ),
-            min = FRUSTUM_MIN,
-            range = ( FRUSTUM_MAX - FRUSTUM_MIN ),
+            min = STAR_MIN,
+            range = ( STAR_MAX - STAR_MIN ),
             i;
+        // set spectrum
+        rainbow.setSpectrum.apply( rainbow, colorSpectrum );
+        rainbow.setNumberRange( 0, 1 );
         for ( i=0; i<n; i++ ) {
             var a = Math.random() > 0.5 ? 1 : -1,
                 b = Math.random() > 0.5 ? 1 : -1,
@@ -57,12 +93,13 @@
                 epsilon = range * 0.1,
                 rand = randomLog(),
                 distance = ( min + epsilon ) +  rand * ( range - epsilon ),
-                radius = MIN_RADIUS + ( MAX_RADIUS - MIN_RADIUS ) * ( 1 - rand );
+                radius = minRadius + ( maxRadius - minRadius ) * ( 1 - rand ),
+                rgb;
             positions[i] = new alfador.Vec3(
                 a * Math.random(),
                 b * Math.random(),
                 c * Math.random() ).length( distance );
-            var rgb = hexToRgb( rainbow.colorAt( Math.random() ) );
+            rgb = hexToRgb( rainbow.colorAt( Math.random() ) );
             colors[i] = [
                 rgb.r / 255,
                 rgb.g / 255,
@@ -104,9 +141,6 @@
         });
     });
 
-    var verticalRotation = 0;
-    var horizontalRotation = 0;
-
     function createFirstPersonMouse() {
         var mouse = new rolypoly.Mouse();
         // rotate mouse on hold
@@ -123,9 +157,8 @@
 
     function rotateEntity( entity ) {
         var DEGREES_PER_MILLI = entity.velocity / 1000,
-            axis = [ 0, 1, 0 ],
-            rotation = alfador.Mat33.rotationDegrees( DEGREES_PER_MILLI * time, axis );
-        entity.forward( rotation.mult( [ 0, 0, 1 ] ) );
+            axis = [ 0.1, 1, 0.3 ];
+        entity.rotateWorldDegrees( delta * DEGREES_PER_MILLI, axis );
     }
 
     function processFrame() {
@@ -148,8 +181,8 @@
             entity.opacity = Math.min( 1, entity.opacity + 0.01 );
         });
 
-        camera.rotateLocalDegrees( delta/10 * -verticalRotation , [ 0, 1, 0 ] );
-        camera.rotateLocalDegrees( delta/10 * horizontalRotation , [ 1, 0, 0 ] );
+        camera.rotateLocalDegrees( delta/10 * -verticalRotation, [ 0, 1, 0 ] );
+        camera.rotateLocalDegrees( delta/10 * horizontalRotation, [ 1, 0, 0 ] );
 
         verticalRotation = verticalRotation * 0.97;
         horizontalRotation = horizontalRotation * 0.97;
@@ -340,6 +373,7 @@
             numLetters--;
             setTimeout( deleteLetter, getPause() );
         }
+
         var elem = $elem.contents()[0],
             numLetters = text.length;
             deleteLetter();
@@ -371,44 +405,7 @@
     }
 
     window.startApplication = function() {
-        var VELOCITY = {
-                SLOW: 1,
-                MEDIUM: 1.1,
-                FAST: 1.2
-            },
-            NEBULAS = [
-                {
-                    url: './images/cold',
-                    velocity: VELOCITY.FAST
-                },
-                {
-                    url: './images/hot',
-                    velocity: VELOCITY.SLOW
-                }
-            ],
-            STARS = [
-                {
-                    url: './images/cold_stars',
-                    velocity: VELOCITY.FAST
-                }
-            ],
-            SHADERS = [
-                {
-                    id: "cubeMap",
-                    vert: "./shaders/cubemap.vert",
-                    frag: "./shaders/cubemap.frag"
-                },
-                {
-                    id: "stars",
-                    vert: "./shaders/point.vert",
-                    frag: "./shaders/point.frag"
-                },
-                {
-                    id: "nebula",
-                    vert: "./shaders/nebula.vert",
-                    frag: "./shaders/nebula.frag"
-                }
-            ];
+
 
         // get WebGL context and loads all available extensions
         gl = esper.WebGLContext.get( "glcanvas" );
@@ -481,7 +478,7 @@
                 url: "./images/star.png"
             }, function() {
                 d.resolve();
-                stars.push( generateStars( 10000, VELOCITY.MEDIUM ) );
+                stars.push( generateStars( 10000, VELOCITY.MEDIUM, 5, 100, [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] ) );
                 stars.push( generateStars( 20000, VELOCITY.SLOW, 3, 5, [ "7C063D", "5A0649", "332343" ] ) );
             });
             deferreds.push( d );
