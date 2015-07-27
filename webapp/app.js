@@ -160,6 +160,7 @@
             prevX,
             prevY;
         touch.on( 'move', function( event ) {
+            event.preventDefault();
             var touch = event.touches[0];
             if ( prevX === undefined && prevY === undefined ) {
                 prevX = touch.clientX;
