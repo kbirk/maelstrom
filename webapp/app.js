@@ -169,8 +169,8 @@
             }
             var dx = touch.clientX - prevX,
                 dy = touch.clientY - prevY;
-            verticalRotation += dx / 500;
-            horizontalRotation += dy / 500;
+            verticalRotation += dx / -500;
+            horizontalRotation += dy / -500;
             prevX = touch.clientX;
             prevY = touch.clientY;
         });
