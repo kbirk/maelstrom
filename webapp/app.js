@@ -6,6 +6,7 @@
     var camera;
     var renderer;
     var mouse;
+    var touch;
     var viewport;
     var FIELD_OF_VIEW = 60;
     var MIN_Z = 0.1;
@@ -109,7 +110,6 @@
 
     function createFirstPersonMouse() {
         var mouse = new rolypoly.Mouse();
-        // rotate mouse on hold
         mouse.on( 'move', function( event ) {
             var dx = event.clientX - event.previousClientX,
                 dy = event.clientY - event.previousClientY;
@@ -119,6 +119,31 @@
             }
         });
         return mouse;
+    }
+
+    function createFirstPersonTouch() {
+        var touch = new rolypoly.Touch(),
+            prevX,
+            prevY;
+        touch.on( 'move', function( event ) {
+            var touch = event.touches[0];
+            if ( prevX === undefined && prevY === undefined ) {
+                prevX = touch.clientX;
+                prevY = touch.clientY;
+                return;
+            }
+            var dx = touch.clientX - prevX,
+                dy = touch.clientY - prevY;
+            verticalRotation += dx / 500;
+            horizontalRotation += dy / 500;
+            prevX = touch.clientX;
+            prevY = touch.clientY;
+        });
+        touch.on( 'end', function() {
+            prevX = undefined;
+            prevY = undefined;
+        });
+        return touch;
     }
 
     function rotateEntity( entity ) {
@@ -424,8 +449,9 @@
                     zMax: MAX_Z
                 }
             });
-            // create mouse input poller
+            // create mouse and touch input handlers
             mouse = createFirstPersonMouse();
+            touch = createFirstPersonTouch();
 
             var deferreds = [];
             SHADERS.forEach( function( shader ) {
