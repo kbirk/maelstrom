@@ -15,6 +15,7 @@
         html: [ 'webapp/html/**/*.html' ],
         index: [ 'webapp/index.html' ],
         images: [ 'webapp/resources/images/*.png' ],
+        favicons: [ 'webapp/favicons/*' ],
         shaders: [ 'webapp/resources/shaders/*.vert', 'webapp/resources/shaders/*.frag' ]
     };
 
@@ -71,6 +72,11 @@
             .pipe( gulp.dest('build/images/') );
     });
 
+    gulp.task('copy-favicons', function() {
+        return gulp.src( paths.favicons )
+            .pipe( gulp.dest('build/') );
+    });
+
     gulp.task('build-vendor-js', function() {
         filter = filter || require('gulp-filter');
         bower = bower || require('main-bower-files');
@@ -100,6 +106,7 @@
         gulp.watch( paths.images, [ 'copy-images' ] );
         gulp.watch( paths.index, [ 'copy-index' ] );
         gulp.watch( paths.shaders, [ 'copy-shaders' ] );
+        gulp.watch( paths.shaders, [ 'copy-favicons' ] );
     });
 
     gulp.task('serve', ['build'], function() {
@@ -124,6 +131,7 @@
         gulp.start( 'copy-index' );
         gulp.start( 'copy-images' );
         gulp.start( 'copy-shaders' );
+        gulp.start( 'copy-favicons' );
     });
 
     gulp.task('default', [ 'watch', 'build', 'serve' ], function() {
