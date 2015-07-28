@@ -54,10 +54,18 @@ header > h2 {
 }
 
 .icon {
+    position: relative;
     padding-right: 8px;
     font-size: 24pt;
     color: #FFF;
     text-decoration: none;
+    transition: transform 0.15s ease-out;
+    -webkit-transition: transform 0.15s ease-out;
+    -ms-transition: transform 0.15s ease-out;
+}
+
+.icon:hover {
+    transform: translate(0pt,2pt);
 }
 
 .left {
