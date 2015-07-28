@@ -460,19 +460,15 @@
                 deferreds.push( d );
             });
 
-            NEBULAS.forEach( function( nebula ) {
-                var d = loadCubeMap( nebula.url );
-                $.when( d ).then( function( texture ) {
-                    var n = new esper.Entity({
-                        scale: 10,
-                        meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-                    });
-                    n.meshes[0].material.diffuseTexture = texture;
-                    n.velocity = nebula.velocity;
-                    n.opacity = 0;
-                    nebulas.push( n );
-                });
+            var d = $.Deferred();
+            starTexture = new esper.Texture2D({
+                url: "./images/star.png"
+            }, function() {
+                stars.push( generateStars( 10000, VELOCITY.MEDIUM, 5, 100, [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] ) );
+                stars.push( generateStars( 20000, VELOCITY.SLOW, 3, 7, [ "7C063D", "5A0649", "332343" ] ) );
+                d.resolve();
             });
+            deferreds.push( d );
 
             STARS.forEach( function( stars ) {
                 var d = loadCubeMap( stars.url );
@@ -488,30 +484,36 @@
                 });
             });
 
-            //
-            setTimeout( function() {
-                animatedTyping( $('h2'), [
-                    'is a software developer',
-                    'lives in toronto, ontario',
-                    'works at uncharted software'
-                ]);
-            }, 2000 );
+            NEBULAS.forEach( function( nebula ) {
+                var d = loadCubeMap( nebula.url );
+                $.when( d ).then( function( texture ) {
+                    var n = new esper.Entity({
+                        scale: 10,
+                        meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
+                    });
+                    n.meshes[0].material.diffuseTexture = texture;
+                    n.velocity = nebula.velocity;
+                    n.opacity = 0;
+                    nebulas.push( n );
+                });
+            });
+
+            // typing effect
+            $('.blinking').text('_');
 
             // create renderer
             createRenderer();
 
-            var d = $.Deferred();
-            starTexture = new esper.Texture2D({
-                url: "./images/star.png"
-            }, function() {
-                d.resolve();
-                stars.push( generateStars( 10000, VELOCITY.MEDIUM, 5, 100, [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] ) );
-                stars.push( generateStars( 20000, VELOCITY.SLOW, 3, 5, [ "7C063D", "5A0649", "332343" ] ) );
-            });
-            deferreds.push( d );
-
             // once everything is ready, begin rendering loop
             $.when.apply( $, deferreds ).then ( function() {
+                // start typing effect
+                setTimeout( function() {
+                    animatedTyping( $('.typing'), [
+                        'is a software developer',
+                        'lives in toronto, ontario',
+                        'works at uncharted software'
+                    ]);
+                }, 2000 );
                 // initiate draw loop
                 processFrame();
             });
