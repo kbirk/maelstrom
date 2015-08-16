@@ -10,11 +10,11 @@
         uglify;
 
     var paths = {
-        js: [ 'webapp/js/**/*.js', 'webapp/*.js' ],
+        js: [ 'webapp/js/**/*.js', 'webapp/app.js' ],
         css: [ 'webapp/css/reset.css', 'webapp/css/*.css' ],
         html: [ 'webapp/html/**/*.html' ],
         index: [ 'webapp/index.html' ],
-        images: [ 'webapp/resources/images/*.png' ],
+        images: [ 'webapp/resources/images*/*.png' ],
         favicons: [ 'webapp/favicons/*' ],
         shaders: [ 'webapp/resources/shaders/*.vert', 'webapp/resources/shaders/*.frag' ]
     };
@@ -69,7 +69,7 @@
 
     gulp.task('copy-images', function() {
         return gulp.src( paths.images )
-            .pipe( gulp.dest('build/images/') );
+            .pipe( gulp.dest('build/') );
     });
 
     gulp.task('copy-favicons', function() {

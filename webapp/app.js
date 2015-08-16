@@ -10,13 +10,16 @@
         MEDIUM: 1.1,
         FAST: 1.2
     };
+
+    var IMAGES_DIR = isMobile() ? 'images-mobile' : 'images-desktop';
+
     var NEBULAS = [
         {
-            url: './images/cold',
+            url: './' + IMAGES_DIR + '/cold',
             velocity: VELOCITY.FAST
         },
         {
-            url: './images/hot',
+            url: './' + IMAGES_DIR + '/hot',
             velocity: VELOCITY.SLOW
         }
     ];
@@ -26,6 +29,8 @@
             velocity: VELOCITY.FAST
         }
     ];
+    var STAR_URL = './images/star.png';
+
     var SHADERS = [
         {
             id: "cubeMap",
@@ -462,7 +467,7 @@
 
             var d = $.Deferred();
             starTexture = new esper.Texture2D({
-                url: "./images/star.png"
+                url: STAR_URL
             }, function() {
                 stars.push( generateStars( 10000, VELOCITY.MEDIUM, 5, 100, [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] ) );
                 stars.push( generateStars( 20000, VELOCITY.SLOW, 3, 7, [ "7C063D", "5A0649", "332343" ] ) );

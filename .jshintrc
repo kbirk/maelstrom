@@ -82,6 +82,7 @@
         "alfador"   : false,
         "rolypoly"  : false,
         "esper"     : false,
-        "Rainbow"   : false
+        "Rainbow"   : false,
+        "isMobile"  : false
     }
 }
