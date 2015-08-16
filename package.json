@@ -1,28 +1,29 @@
 {
-    "name": "maelstrom",
-    "version": "0.1.0",
-    "private": true,
-    "author": "Kevin Birk <birk.kevin@gmail.com>",
-    "dependencies": {
-        "body-parser": "^1.12.3",
-        "del": "^1.1.1",
-        "express": "^4.12.3",
-        "gulp": "^3.8.11",
-        "gulp-concat": "^2.5.2",
-        "gulp-csso": "^1.0.0",
-        "gulp-filter": "^2.0.0",
-        "gulp-jshint": "^1.10.0",
-        "gulp-minify-html": "^1.0.2",
-        "gulp-uglify": "^1.1.0",
-        "jshint-stylish": "^1.0.1",
-        "main-bower-files": "^2.6.2"
-    },
-    "devDependencies": {
-    },
-    "scripts": {
-        "lint": "./node_modules/.bin/gulp lint",
-        "serve": "./node_modules/.bin/gulp serve",
-        "build": "./node_modules/.bin/gulp build",
-        "watch": "./node_modules/.bin/gulp watch"
-    }
+  "name": "maelstrom",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Kevin Birk <birk.kevin@gmail.com>",
+  "dependencies": {
+    "body-parser": "^1.12.3",
+    "del": "^1.1.1",
+    "express": "^4.12.3",
+    "gulp": "^3.8.11",
+    "gulp-concat": "^2.5.2",
+    "gulp-csso": "^1.0.0",
+    "gulp-filter": "^2.0.0",
+    "gulp-jshint": "^1.10.0",
+    "gulp-minify-html": "^1.0.2",
+    "gulp-uglify": "^1.1.0",
+    "jshint-stylish": "^1.0.1",
+    "main-bower-files": "^2.6.2",
+    "run-sequence": "^1.1.2"
+  },
+  "devDependencies": {
+  },
+  "scripts": {
+    "lint": "./node_modules/.bin/gulp lint",
+    "serve": "./node_modules/.bin/gulp serve",
+    "build": "./node_modules/.bin/gulp build",
+    "watch": "./node_modules/.bin/gulp watch"
+  }
 }

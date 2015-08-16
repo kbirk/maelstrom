@@ -99,7 +99,7 @@
             .pipe( gulp.dest('build') );
     });
 
-    gulp.task('watch', function() {
+    gulp.task('watch', function( done ) {
         gulp.watch( paths.js, [ 'build-min-js' ] );
         gulp.watch( paths.css, ['build-min-css'] );
         gulp.watch( paths.html, [ 'build-min-html' ] );
@@ -107,6 +107,7 @@
         gulp.watch( paths.index, [ 'copy-index' ] );
         gulp.watch( paths.shaders, [ 'copy-shaders' ] );
         gulp.watch( paths.shaders, [ 'copy-favicons' ] );
+        done();
     });
 
     gulp.task('serve', ['build'], function() {
@@ -122,16 +123,14 @@
         return app;
     });
 
-    gulp.task('build', [ 'clean', 'lint' ], function() {
-        gulp.start( 'build-min-js' );
-        gulp.start( 'build-min-css' );
-        gulp.start( 'build-min-html' );
-        gulp.start( 'build-vendor-js' );
-        gulp.start( 'build-vendor-css' );
-        gulp.start( 'copy-index' );
-        gulp.start( 'copy-images' );
-        gulp.start( 'copy-shaders' );
-        gulp.start( 'copy-favicons' );
+    gulp.task('build', [ 'clean', 'lint' ], function( done ) {
+        var runSequence = require('run-sequence');
+        runSequence(
+            [ 'clean', 'lint' ],
+            [ 'build-min-js', 'build-min-css', 'build-min-html',
+                'build-vendor-js', 'build-vendor-css', 'copy-index',
+                'copy-images', 'copy-shaders', 'copy-favicons' ],
+            done );
     });
 
     gulp.task('default', [ 'watch', 'build', 'serve' ], function() {
