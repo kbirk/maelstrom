@@ -11,7 +11,9 @@
         FAST: 1.2
     };
 
-    var IMAGES_DIR = isMobile() ? 'images-mobile' : 'images-desktop';
+    var IS_MOBILE = isMobile();
+
+    var IMAGES_DIR = IS_MOBILE ? 'images-mobile' : 'images-desktop';
 
     var NEBULAS = [
         {
@@ -199,12 +201,18 @@
 
         staticStars.forEach( function( entity ) {
             rotateEntity( entity );
-            entity.opacity = Math.min( 1, entity.opacity + 0.01  );
+            if ( entity.hasLoaded ) {
+                // start fading in once the texture has loaded
+                entity.opacity = Math.min( 1, entity.opacity + 0.01  );
+            }
         });
 
         nebulas.forEach( function( entity ) {
             rotateEntity( entity );
-            entity.opacity = Math.min( 1, entity.opacity + 0.01 );
+            if ( entity.hasLoaded ) {
+                // start fading in once the texture has loaded
+                entity.opacity = Math.min( 1, entity.opacity + 0.01  );
+            }
         });
 
         stars.forEach( function( entity ) {
@@ -255,10 +263,13 @@
                         shaders.cubeMap.setUniform( 'uModelMatrix', entity.globalMatrix() );
                         shaders.cubeMap.setUniform( 'uOpacity', entity.opacity );
                     },
-                    forEachMesh: function( mesh ) {
-                        mesh.material.diffuseTexture.push( 0 );
-                        mesh.draw();
-                        mesh.material.diffuseTexture.pop( 0 );
+                    forEachMesh: function( mesh, entity ) {
+                        if ( entity.hasLoaded ) {
+                            // only draw if the texture is attached
+                            mesh.material.diffuseTexture.push( 0 );
+                            mesh.draw();
+                            mesh.material.diffuseTexture.pop( 0 );
+                        }
                     },
                     after: function() {
                         shaders.cubeMap.pop();
@@ -288,11 +299,14 @@
                         shaders.nebula.setUniform( 'uModelMatrix', entity.globalMatrix() );
                         shaders.nebula.setUniform( 'uOpacity', entity.opacity );
                     },
-                    forEachMesh: function( mesh ) {
-                        mesh.material.diffuseTexture.push( 0 );
-                        shaders.nebula.setUniform( 'uIndex', index++ );
-                        mesh.draw();
-                        mesh.material.diffuseTexture.pop( 0 );
+                    forEachMesh: function( mesh, entity ) {
+                        if ( entity.hasLoaded ) {
+                            // only draw if the texture is attached
+                            mesh.material.diffuseTexture.push( 0 );
+                            shaders.nebula.setUniform( 'uIndex', index++ );
+                            mesh.draw();
+                            mesh.material.diffuseTexture.pop( 0 );
+                        }
                     },
                     after: function() {
                         shaders.nebula.pop();
@@ -469,37 +483,40 @@
             starTexture = new esper.Texture2D({
                 url: STAR_URL
             }, function() {
-                stars.push( generateStars( 10000, VELOCITY.MEDIUM, 5, 100, [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] ) );
-                stars.push( generateStars( 20000, VELOCITY.SLOW, 3, 7, [ "7C063D", "5A0649", "332343" ] ) );
+                var countFactor = IS_MOBILE ? 0.5 : 1;
+                stars.push( generateStars( 10000 * countFactor, VELOCITY.MEDIUM, 5, 100, [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] ) );
+                stars.push( generateStars( 20000 * countFactor, VELOCITY.SLOW, 3, 7, [ "7C063D", "5A0649", "332343" ] ) );
                 d.resolve();
             });
             deferreds.push( d );
 
             STARS.forEach( function( stars ) {
                 var d = loadCubeMap( stars.url );
+                var s = new esper.Entity({
+                    scale: 10,
+                    meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
+                });
+                s.velocity = stars.velocity;
+                s.opacity = 0;
+                staticStars.push( s );
                 $.when( d ).then( function( texture ) {
-                    var s = new esper.Entity({
-                        scale: 10,
-                        meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-                    });
                     s.meshes[0].material.diffuseTexture = texture;
-                    s.velocity = stars.velocity;
-                    s.opacity = 0;
-                    staticStars.push( s );
+                    s.hasLoaded = true;
                 });
             });
 
             NEBULAS.forEach( function( nebula ) {
                 var d = loadCubeMap( nebula.url );
+                var n = new esper.Entity({
+                    scale: 10,
+                    meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
+                });
+                n.velocity = nebula.velocity;
+                n.opacity = 0;
+                nebulas.push( n );
                 $.when( d ).then( function( texture ) {
-                    var n = new esper.Entity({
-                        scale: 10,
-                        meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-                    });
                     n.meshes[0].material.diffuseTexture = texture;
-                    n.velocity = nebula.velocity;
-                    n.opacity = 0;
-                    nebulas.push( n );
+                    n.hasLoaded = true;
                 });
             });
 
