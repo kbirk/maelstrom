@@ -123,7 +123,7 @@
         return app;
     });
 
-    gulp.task('build', [ 'clean', 'lint' ], function( done ) {
+    gulp.task('build', function( done ) {
         var runSequence = require('run-sequence');
         runSequence(
             [ 'clean', 'lint' ],
