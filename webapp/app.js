@@ -13,43 +13,55 @@
 
     var IS_MOBILE = isMobile();
 
+    var FOREGROUND_STAR_SPECTRUM = [
+        [0.247, 0.698, 1],
+        [0.247, 0.270, 1],
+        [0.435, 0.247, 1],
+        [0.647, 0.247, 1]
+    ];
+    var BACKGROUND_START_SPECTRUM = [
+        [0.486, 0.023, 0.239],
+        [0.352, 0.023, 0.286],
+        [0.2, 0.137, 0.262]
+    ];
+
     var IMAGES_DIR = IS_MOBILE ? 'images-mobile' : 'images-desktop';
 
     var NEBULAS = [
         {
             url: './' + IMAGES_DIR + '/cold',
-            velocity: VELOCITY.FAST
+            velocity: 'fast'
         },
         {
             url: './' + IMAGES_DIR + '/hot',
-            velocity: VELOCITY.SLOW
+            velocity: 'slow'
         }
     ];
     var STARS = [
         {
             url: './images/cold_stars',
-            velocity: VELOCITY.FAST
+            velocity: 'fast'
         }
     ];
-    var STAR_URL = './images/star.png';
-
-    var SHADERS = [
-        {
-            id: "cubeMap",
+    var STAR_TEXTURE = {
+        url: './images/star.png'
+    };
+    var SHADERS = {
+        cubeMap: {
             vert: "./shaders/cubemap.vert",
             frag: "./shaders/cubemap.frag"
         },
-        {
-            id: "stars",
+        stars: {
             vert: "./shaders/point.vert",
             frag: "./shaders/point.frag"
         },
-        {
-            id: "nebula",
+        nebula: {
             vert: "./shaders/nebula.vert",
             frag: "./shaders/nebula.frag"
         }
-    ];
+    };
+    var ROTATION_FRICTION = 0.03;
+
     var verticalRotation = 0;
     var horizontalRotation = 0;
     var startTime = new Date().getTime();
@@ -61,86 +73,115 @@
     var staticStars = [];
     var starTexture;
     var shaders = {};
+    var transforms;
     var gl;
     var camera;
-    var renderer;
     var mouse;
     var touch;
     var viewport;
 
-    function randomLog() {
-        return 1 - Math.pow( Math.random(), 40 );
-    }
-
-    function hexToRgb( hex ) {
-        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : null;
-    }
-
-    function generateStars( n, velocity, minRadius, maxRadius, colorSpectrum ) {
-        var rainbow = new Rainbow(),
-            STAR_MIN = 1,
-            STAR_MAX = 1000,
-            positions = new Array( n ),
-            colors = new Array( n ),
-            indices = new Array( n ),
-            min = STAR_MIN,
-            range = ( STAR_MAX - STAR_MIN ),
-            i;
-        // set spectrum
-        rainbow.setSpectrum.apply( rainbow, colorSpectrum );
-        rainbow.setNumberRange( 0, 1 );
-        for ( i=0; i<n; i++ ) {
-            var a = Math.random() > 0.5 ? 1 : -1,
-                b = Math.random() > 0.5 ? 1 : -1,
-                c = Math.random() > 0.5 ? 1 : -1,
-                epsilon = range * 0.1,
-                rand = randomLog(),
-                distance = ( min + epsilon ) +  rand * ( range - epsilon ),
-                radius = minRadius + ( maxRadius - minRadius ) * ( 1 - rand ),
-                rgb;
-            positions[i] = new alfador.Vec3(
-                a * Math.random(),
-                b * Math.random(),
-                c * Math.random() ).length( distance );
-            rgb = hexToRgb( rainbow.colorAt( Math.random() ) );
-            colors[i] = [
-                rgb.r / 255,
-                rgb.g / 255,
-                rgb.b / 255,
-                Math.round( radius ) ];
-            indices[i] = i;
+    function fill( count, filler ) {
+        var arr = new Array( count );
+        for ( var i=0; i<count; i++ ) {
+            arr[i] = filler;
         }
-        var stars = new esper.Entity({
-            meshes: [
-                new esper.Mesh({
-                    renderable: new esper.Renderable({
-                        positions: positions,
-                        colors: colors,
-                        indices: indices,
-                        options: {
-                            mode: 'POINTS'
-                        }
-                    }),
-                    geometry: new esper.Geometry({
-                        positions: positions,
-                        indices: indices
-                    })
-                })
+        return arr;
+    }
+
+    function initVertexBuffer( count ) {
+        // create filler array
+        var filler = fill( count, [ 0, 0, 0, 0 ] );
+        // create vertex buffer, this will be updated periodically
+        return new esper.VertexBuffer(
+            new esper.VertexPackage([
+                /**
+                 * x: x
+                 * y: y
+                 * y: z
+                 * w: rotation
+                 */
+                filler,
+                /**
+                 * x: red
+                 * y: green
+                 * y: blue
+                 * w: radius
+                 */
+                filler ])
+        );
+    }
+
+    function createStarEntity( vertexBuffer, velocity, offset, count ) {
+        return {
+            draw: function() {
+                vertexBuffer.bind();
+                gl.drawArrays(
+                    gl.POINTS, // primitive type
+                    offset, // offset
+                    count ); // count
+                vertexBuffer.unbind();
+            },
+            transform: transforms[ velocity ],
+            opacity: 0
+        };
+    }
+
+    function generateStars() {
+        var loadingBar = new LoadingBar();
+        var countFactor = IS_MOBILE ? 0.5 : 1;
+        var foregroundStars = {
+            count: 10000 * countFactor,
+            velocity: 'medium',
+            minRadius: 5,
+            maxRadius: 100,
+            colorSpectrum: FOREGROUND_STAR_SPECTRUM
+        };
+        var backgroundStars = {
+            count: 20000 * countFactor,
+            velocity: 'slow',
+            minRadius: 3,
+            maxRadius: 7,
+            colorSpectrum: BACKGROUND_START_SPECTRUM
+        };
+        var vertexBuffer = initVertexBuffer( backgroundStars.count + foregroundStars.count );
+        // create web worker to generate particles
+        var worker = new Worker('webworkers/StarGenerator.js');
+        worker.addEventListener('message', function( e ) {
+            switch ( e.data.type ) {
+                case 'progress':
+                    loadingBar.update( e.data.progress );
+                    break;
+                case 'complete':
+                    loadingBar.finish();
+                    vertexBuffer.bufferData( new Float32Array( e.data.buffer ) );
+                    worker.terminate();
+                    // add foreground stars
+                    stars.push( createStarEntity(
+                        vertexBuffer,
+                        foregroundStars.velocity,
+                        0,
+                        foregroundStars.count ) );
+                    // add background stars
+                    stars.push( createStarEntity(
+                        vertexBuffer,
+                        backgroundStars.velocity,
+                        foregroundStars.count,
+                        backgroundStars.count ) );
+                    break;
+            }
+        });
+        // start the webworker
+        worker.postMessage({
+            type: 'start',
+            batches: [
+                foregroundStars,
+                backgroundStars
             ]
         });
-        stars.velocity = velocity;
-        stars.opacity = 0;
-        return stars;
     }
 
     window.addEventListener( 'resize', function() {
-        viewport.height = window.innerHeight;
-        viewport.width = window.innerWidth;
+        viewport.resize( window.innerWidth, window.innerHeight );
         camera.projectionMatrix({
             fov: FIELD_OF_VIEW,
             aspect: viewport.width / viewport.height,
@@ -188,10 +229,10 @@
         return touch;
     }
 
-    function rotateEntity( entity ) {
-        var DEGREES_PER_MILLI = entity.velocity / 1000,
+    function rotateTransform( transform, velocity ) {
+        var DEGREES_PER_MILLI = velocity / 1000,
             axis = [ 0.1, 1, 0.3 ];
-        entity.rotateWorldDegrees( delta * DEGREES_PER_MILLI, axis );
+        transform.rotateWorldDegrees( delta * DEGREES_PER_MILLI, axis );
     }
 
     function processFrame() {
@@ -199,32 +240,29 @@
         time = new Date().getTime() - startTime;
         delta = time - prevTime;
 
+        // update transforms
+        rotateTransform( transforms.fast, VELOCITY.FAST );
+        rotateTransform( transforms.medium, VELOCITY.MEDIUM );
+        rotateTransform( transforms.slow, VELOCITY.SLOW );
+
+        // fade everything in once it exists
         staticStars.forEach( function( entity ) {
-            rotateEntity( entity );
-            if ( entity.hasLoaded ) {
-                // start fading in once the texture has loaded
-                entity.opacity = Math.min( 1, entity.opacity + 0.01  );
-            }
+            entity.opacity = Math.min( 1, entity.opacity + 0.01  );
         });
-
         nebulas.forEach( function( entity ) {
-            rotateEntity( entity );
-            if ( entity.hasLoaded ) {
-                // start fading in once the texture has loaded
-                entity.opacity = Math.min( 1, entity.opacity + 0.01  );
-            }
+            entity.opacity = Math.min( 1, entity.opacity + 0.01  );
         });
-
         stars.forEach( function( entity ) {
-            rotateEntity( entity );
             entity.opacity = Math.min( 1, entity.opacity + 0.01 );
         });
 
+        // rotate camera based on current drag rotation
         camera.rotateLocalDegrees( delta/10 * -verticalRotation, [ 0, 1, 0 ] );
         camera.rotateLocalDegrees( delta/10 * horizontalRotation, [ 1, 0, 0 ] );
 
-        verticalRotation = verticalRotation * 0.97;
-        horizontalRotation = horizontalRotation * 0.97;
+        // update rotation velocity
+        verticalRotation = verticalRotation * ( 1 - ROTATION_FRICTION );
+        horizontalRotation = horizontalRotation * ( 1 - ROTATION_FRICTION );
         if ( Math.abs( verticalRotation ) < 0.0001 ) {
             verticalRotation = 0;
         }
@@ -232,123 +270,90 @@
             horizontalRotation = 0;
         }
 
-        // render entities
-        renderer.render(
-            camera,
-            {
-                "cubeMap": staticStars,
-                "nebula": nebulas,
-                "stars": stars
-            });
+        // render frame
+        renderFrame();
 
+        // store last timestamp
         prevTime = time;
 
         // redraw when browser is ready
         requestAnimationFrame( processFrame );
     }
 
-    function createCubeMapTechnique() {
-        return new esper.RenderTechnique({
-            id: "cubeMap",
-            passes: [
-                new esper.RenderPass({
-                    before: function( camera ) {
-                        viewport.push();
-                        shaders.cubeMap.push();
-                        shaders.cubeMap.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-                        shaders.cubeMap.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
-                        shaders.cubeMap.setUniform( 'uCubeMapSampler', 0 );
-                    },
-                    forEachEntity: function( entity ) {
-                        shaders.cubeMap.setUniform( 'uModelMatrix', entity.globalMatrix() );
-                        shaders.cubeMap.setUniform( 'uOpacity', entity.opacity );
-                    },
-                    forEachMesh: function( mesh, entity ) {
-                        if ( entity.hasLoaded ) {
-                            // only draw if the texture is attached
-                            mesh.material.diffuseTexture.push( 0 );
-                            mesh.draw();
-                            mesh.material.diffuseTexture.pop( 0 );
-                        }
-                    },
-                    after: function() {
-                        shaders.cubeMap.pop();
-                        viewport.pop();
-                    }
-                })
-            ]
-        });
+    function renderFrame() {
+        // setup
+        viewport.push();
+        // render entities
+        renderCubeMaps( staticStars );
+        renderNebulas( nebulas );
+        renderStars( stars );
+        // teardown
+        viewport.pop();
     }
 
-    function createNebulaTechnique() {
-        var index;
-        return new esper.RenderTechnique({
-            id: "nebula",
-            passes: [
-                new esper.RenderPass({
-                    before: function( camera ) {
-                        viewport.push();
-                        shaders.nebula.push();
-                        shaders.nebula.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-                        shaders.nebula.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
-                        shaders.nebula.setUniform( 'uDelta', time / 1000 );
-                        shaders.nebula.setUniform( 'uCubeMapSampler', 0 );
-                        index = 0;
-                    },
-                    forEachEntity: function( entity ) {
-                        shaders.nebula.setUniform( 'uModelMatrix', entity.globalMatrix() );
-                        shaders.nebula.setUniform( 'uOpacity', entity.opacity );
-                    },
-                    forEachMesh: function( mesh, entity ) {
-                        if ( entity.hasLoaded ) {
-                            // only draw if the texture is attached
-                            mesh.material.diffuseTexture.push( 0 );
-                            shaders.nebula.setUniform( 'uIndex', index++ );
-                            mesh.draw();
-                            mesh.material.diffuseTexture.pop( 0 );
-                        }
-                    },
-                    after: function() {
-                        shaders.nebula.pop();
-                        viewport.pop();
-                    }
-                })
-            ]
+    function renderCubeMaps( entities ) {
+        // setup
+        shaders.cubeMap.push();
+        shaders.cubeMap.setUniform( 'uCubeMapSampler', 0 );
+        // set camera uniforms
+        shaders.cubeMap.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+        shaders.cubeMap.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+        // for each entity
+        entities.forEach( function( entity ) {
+            shaders.cubeMap.setUniform( 'uModelMatrix', entity.transform.matrix() );
+            shaders.cubeMap.setUniform( 'uOpacity', entity.opacity );
+            entity.texture.push( 0 );
+            entity.renderable.draw();
+            entity.texture.pop( 0 );
         });
+        // teardown
+        shaders.cubeMap.pop();
     }
 
-    function createStarsTechnique() {
-        return new esper.RenderTechnique({
-            id: "stars",
-            passes: [
-                new esper.RenderPass({
-                    before: function( camera ) {
-                        viewport.push();
-                        shaders.stars.push();
-                        shaders.stars.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-                        shaders.stars.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
-                        shaders.stars.setUniform( 'uPointSampler', 0 );
-                        shaders.stars.setUniform( 'uDelta', time / 1000 );
-                        starTexture.push( 0 );
-                    },
-                    forEachEntity: function( entity ) {
-                        shaders.stars.setUniform( 'uModelMatrix', entity.globalMatrix() );
-                        shaders.stars.setUniform( 'uOpacity', entity.opacity );
-                    },
-                    forEachMesh: function( mesh ) {
-                        mesh.draw();
-                    },
-                    after: function() {
-                        starTexture.pop( 0 );
-                        shaders.stars.pop();
-                        viewport.pop();
-                    }
-                })
-            ]
+    function renderNebulas( entities ) {
+        // before
+        shaders.nebula.push();
+        shaders.nebula.setUniform( 'uDelta', time / 1000 );
+        shaders.nebula.setUniform( 'uCubeMapSampler', 0 );
+        // set camera uniforms
+        shaders.nebula.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+        shaders.nebula.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+        // for each entity
+        entities.forEach( function( entity, index ) {
+            shaders.nebula.setUniform( 'uModelMatrix', entity.transform.matrix() );
+            shaders.nebula.setUniform( 'uOpacity', entity.opacity );
+            shaders.nebula.setUniform( 'uIndex', index );
+            entity.texture.push( 0 );
+            entity.renderable.draw();
+            entity.texture.pop( 0 );
         });
+        // teardown
+        shaders.nebula.pop();
     }
 
-    function createRenderer() {
+    function renderStars( entities ) {
+        // setup
+        shaders.stars.push();
+        shaders.stars.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+        shaders.stars.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+        shaders.stars.setUniform( 'uPointSampler', 0 );
+        shaders.stars.setUniform( 'uDelta', time / 1000 );
+        // set camera uniforms
+        shaders.stars.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
+        shaders.stars.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+        starTexture.push( 0 );
+        // for each entity
+        entities.forEach( function( entity ) {
+            shaders.stars.setUniform( 'uModelMatrix', entity.transform.matrix() );
+            shaders.stars.setUniform( 'uOpacity', entity.opacity );
+            entity.draw();
+        });
+        // teardown
+        starTexture.pop( 0 );
+        shaders.stars.pop();
+    }
+
+    function setInitialRenderingState() {
         // set intial state
         gl.disable( gl.CULL_FACE );
         gl.disable( gl.DEPTH_TEST );
@@ -356,19 +361,11 @@
         gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
         gl.clearColor( 0, 0, 0, 1 );
         gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-        // create viewport
-        viewport = new esper.Viewport();
-        // create a renderer with a single phong technique
-        renderer = new esper.Renderer([
-            createCubeMapTechnique(),
-            createStarsTechnique(),
-            createNebulaTechnique()
-        ]);
     }
 
     function loadCubeMap( url ) {
-        var deferred = $.Deferred(),
-            texture = new esper.TextureCubeMap({
+        return function( done ) {
+            new esper.TextureCubeMap({
                 urls: {
                     '+x': url + '_right1.png',
                     '-x': url + '_left2.png',
@@ -377,80 +374,31 @@
                     '+z': url + '_front5.png',
                     '-z': url + '_back6.png'
                 }
-            }, function() {
-                deferred.resolve( texture );
+            }, function( texture ) {
+                done( null, texture );
             });
-        return deferred;
+        };
     }
 
-    function typeText( $elem, text, callback ) {
-
-        function getPause() {
-            return Math.random() * 100 + 100;
-        }
-
-        function typeLetter() {
-            if ( numLetters > text.length ) {
-                callback();
-                return;
-            }
-            elem.nodeValue = text.substring( 0, numLetters );
-            numLetters++;
-            setTimeout( typeLetter, getPause() );
-        }
-        var elem = $elem.contents()[0],
-            numLetters = 0;
-        typeLetter();
-    }
-
-    function deleteText( $elem, text, callback ) {
-
-        function getPause() {
-            return Math.random() * 50 + 20;
-        }
-
-        function deleteLetter() {
-            if ( numLetters < 0 ) {
-                callback();
-                return;
-            }
-            elem.nodeValue = text.substring( 0, numLetters );
-            numLetters--;
-            setTimeout( deleteLetter, getPause() );
-        }
-
-        var elem = $elem.contents()[0],
-            numLetters = text.length;
-            deleteLetter();
-    }
-
-    function animatedTyping( $elem, text ) {
-
-        function getLongPause() {
-            return Math.random() * 2000 + 3000;
-        }
-
-        function getShortPause() {
-            return Math.random() * 1000;
-        }
-
-        function type( index ) {
-            typeText( $elem, text[ index ], function() {
-                setTimeout( function() {
-                    deleteText( $elem, text[ index ], function() {
-                        setTimeout( function() {
-                            type( (index+1) % text.length );
-                        }, getShortPause() );
-                    });
-                }, getLongPause() );
+    function loadShader( shader ) {
+        return function( done ) {
+            new esper.Shader( shader, function( shader ) {
+                done( null, shader );
             });
-        }
+        };
+    }
 
-        type( 0 );
+    function loadTexture( url ) {
+        return function( done ) {
+            new esper.Texture2D({
+                url: url
+            }, function( texture ) {
+                done( null, texture );
+            });
+        };
     }
 
     window.startApplication = function() {
-
 
         // get WebGL context and loads all available extensions
         gl = esper.WebGLContext.get( "glcanvas" );
@@ -466,68 +414,29 @@
                     zMax: MAX_Z
                 }
             });
+            // create viewport
+            viewport = new esper.Viewport();
+            viewport.resize( window.innerWidth, window.innerHeight );
+
             // create mouse and touch input handlers
             mouse = createFirstPersonMouse();
             touch = createFirstPersonTouch();
 
-            var deferreds = [];
-            SHADERS.forEach( function( shader ) {
-                var d = $.Deferred();
-                shaders[ shader.id ] = new esper.Shader( shader, function() {
-                    d.resolve();
-                });
-                deferreds.push( d );
-            });
+            // generate stars
+            generateStars();
 
-            var d = $.Deferred();
-            starTexture = new esper.Texture2D({
-                url: STAR_URL
-            }, function() {
-                var countFactor = IS_MOBILE ? 0.5 : 1;
-                stars.push( generateStars( 10000 * countFactor, VELOCITY.MEDIUM, 5, 100, [ 'FFFFFF', '3FB2FF', '3F7BFF', '3F45FF', '6F3FFF', 'A53FFF' ] ) );
-                stars.push( generateStars( 20000 * countFactor, VELOCITY.SLOW, 3, 7, [ "7C063D", "5A0649", "332343" ] ) );
-                d.resolve();
-            });
-            deferreds.push( d );
-
-            STARS.forEach( function( stars ) {
-                var d = loadCubeMap( stars.url );
-                var s = new esper.Entity({
-                    scale: 10,
-                    meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-                });
-                s.velocity = stars.velocity;
-                s.opacity = 0;
-                staticStars.push( s );
-                $.when( d ).then( function( texture ) {
-                    s.meshes[0].material.diffuseTexture = texture;
-                    s.hasLoaded = true;
-                });
-            });
-
-            NEBULAS.forEach( function( nebula ) {
-                var d = loadCubeMap( nebula.url );
-                var n = new esper.Entity({
-                    scale: 10,
-                    meshes: [ new esper.Mesh( esper.Cube.geometry() ) ]
-                });
-                n.velocity = nebula.velocity;
-                n.opacity = 0;
-                nebulas.push( n );
-                $.when( d ).then( function( texture ) {
-                    n.meshes[0].material.diffuseTexture = texture;
-                    n.hasLoaded = true;
-                });
-            });
-
-            // typing effect
-            $('.blinking').text('_');
-
-            // create renderer
-            createRenderer();
-
-            // once everything is ready, begin rendering loop
-            $.when.apply( $, deferreds ).then ( function() {
+            // load essentials required for the frame loop to start
+            async.parallel({
+                'cubeMap': loadShader( SHADERS.cubeMap ),
+                'nebula': loadShader( SHADERS.nebula ),
+                'stars': loadShader( SHADERS.stars ),
+                'starTexture': loadTexture( STAR_TEXTURE.url )
+            }, function( err, results ) {
+                // set results accordingly
+                shaders.cubeMap = results.cubeMap;
+                shaders.nebula = results.nebula;
+                shaders.stars = results.stars;
+                starTexture = results.starTexture;
                 // start typing effect
                 setTimeout( function() {
                     animatedTyping( $('.typing'), [
@@ -536,10 +445,47 @@
                         'works at uncharted software'
                     ]);
                 }, 2000 );
+                // set initial state
+                setInitialRenderingState();
                 // initiate draw loop
                 processFrame();
             });
 
+            // create the transforms
+            transforms = {
+                fast: new esper.Transform(),
+                medium: new esper.Transform(),
+                slow: new esper.Transform()
+            };
+
+            var cube = new esper.Renderable( esper.Cube.geometry() );
+
+            // create stars
+            STARS.forEach( function( star ) {
+                loadCubeMap( star.url )( function( err, cubeMapTexture ) {
+                    staticStars.push({
+                        transform: transforms[ star.velocity ],
+                        opacity: 0,
+                        texture: cubeMapTexture,
+                        renderable: cube
+                    });
+                });
+            });
+
+            // create nebulas
+            NEBULAS.forEach( function( nebula ) {
+                loadCubeMap( nebula.url )( function( err, cubeMapTexture ) {
+                    nebulas.push({
+                        transform: transforms[ nebula.velocity ],
+                        opacity: 0,
+                        texture: cubeMapTexture,
+                        renderable: cube
+                    });
+                });
+            });
+
+            // typing effect
+            $('.blinking').text('_');
         }
     };
 

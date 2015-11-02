@@ -2,6 +2,13 @@
     box-sizing: border-box;
 }
 
+@font-face {
+    font-family: 'Share Tech';
+    font-style: normal;
+    font-weight: 700;
+    src: local('Share Tech'), local('Share-Tech'), url(fonts/ShareTech-Regular.ttf) format('truetype');
+}
+
 body {
     margin: 0;
     font-family: 'Share Tech', sans-serif;
