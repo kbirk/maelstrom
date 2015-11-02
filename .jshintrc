@@ -79,10 +79,12 @@
         "require"   : false,
         "module"    : false,
         "$"         : false,
-        "alfador"   : false,
+        "async"     : false,
         "rolypoly"  : false,
         "esper"     : false,
-        "Rainbow"   : false,
-        "isMobile"  : false
+        "isMobile"  : false,
+        "animatedTyping" : false,
+        "LoadingBar" : false,
+        "StarGenerator" : false
     }
 }
