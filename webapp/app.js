@@ -76,6 +76,7 @@
     var transforms;
     var gl;
     var camera;
+    var projection;
     var mouse;
     var touch;
     var viewport;
@@ -115,11 +116,12 @@
         return {
             draw: function() {
                 vertexBuffer.bind();
-                gl.drawArrays(
-                    gl.POINTS, // primitive type
-                    offset, // offset
-                    count ); // count
-                vertexBuffer.unbind();
+                vertexBuffer.draw({
+                    mode: 'POINTS',
+                    count: count,
+                    offset: offset
+                });
+                // no need to unbind
             },
             transform: transforms[ velocity ],
             opacity: 0
@@ -182,12 +184,11 @@
 
     window.addEventListener( 'resize', function() {
         viewport.resize( window.innerWidth, window.innerHeight );
-        camera.projectionMatrix({
-            fov: FIELD_OF_VIEW,
-            aspect: viewport.width / viewport.height,
-            zMin: MIN_Z,
-            zMax: MAX_Z
-        });
+        projection = alfador.Mat44.perspective(
+            FIELD_OF_VIEW,
+            viewport.width / viewport.height,
+            MIN_Z,
+            MAX_Z );
     });
 
     function createFirstPersonMouse() {
@@ -296,8 +297,8 @@
         shaders.cubeMap.push();
         shaders.cubeMap.setUniform( 'uCubeMapSampler', 0 );
         // set camera uniforms
-        shaders.cubeMap.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-        shaders.cubeMap.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+        shaders.cubeMap.setUniform( 'uProjectionMatrix', projection );
+        shaders.cubeMap.setUniform( 'uViewMatrix', camera.viewMatrix() );
         // for each entity
         entities.forEach( function( entity ) {
             shaders.cubeMap.setUniform( 'uModelMatrix', entity.transform.matrix() );
@@ -316,8 +317,8 @@
         shaders.nebula.setUniform( 'uDelta', time / 1000 );
         shaders.nebula.setUniform( 'uCubeMapSampler', 0 );
         // set camera uniforms
-        shaders.nebula.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-        shaders.nebula.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+        shaders.nebula.setUniform( 'uProjectionMatrix', projection );
+        shaders.nebula.setUniform( 'uViewMatrix', camera.viewMatrix() );
         // for each entity
         entities.forEach( function( entity, index ) {
             shaders.nebula.setUniform( 'uModelMatrix', entity.transform.matrix() );
@@ -334,13 +335,11 @@
     function renderStars( entities ) {
         // setup
         shaders.stars.push();
-        shaders.stars.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-        shaders.stars.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
         shaders.stars.setUniform( 'uPointSampler', 0 );
         shaders.stars.setUniform( 'uDelta', time / 1000 );
         // set camera uniforms
-        shaders.stars.setUniform( 'uProjectionMatrix', camera.projectionMatrix() );
-        shaders.stars.setUniform( 'uViewMatrix', camera.globalViewMatrix() );
+        shaders.stars.setUniform( 'uProjectionMatrix', projection );
+        shaders.stars.setUniform( 'uViewMatrix', camera.viewMatrix() );
         starTexture.push( 0 );
         // for each entity
         entities.forEach( function( entity ) {
@@ -361,6 +360,51 @@
         gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
         gl.clearColor( 0, 0, 0, 1 );
         gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+    }
+
+    function createCube() {
+        return {
+            positions: [
+                // front face
+                [ -0.5, -0.5,  0.5 ],
+                [ 0.5, -0.5,  0.5 ],
+                [  0.5,  0.5,  0.5 ],
+                [ -0.5,  0.5,  0.5 ],
+                // back face
+                [ -0.5, -0.5, -0.5 ],
+                [ -0.5,  0.5, -0.5 ],
+                [  0.5,  0.5, -0.5 ],
+                [  0.5, -0.5, -0.5 ],
+                // top face
+                [ -0.5,  0.5, -0.5 ],
+                [ -0.5,  0.5,  0.5 ],
+                [  0.5,  0.5,  0.5 ],
+                [  0.5,  0.5, -0.5 ],
+                // bottom face
+                [ -0.5, -0.5, -0.5 ],
+                [  0.5, -0.5, -0.5 ],
+                [  0.5, -0.5,  0.5 ],
+                [ -0.5, -0.5,  0.5 ],
+                // right face
+                [  0.5, -0.5, -0.5 ],
+                [  0.5,  0.5, -0.5 ],
+                [  0.5,  0.5,  0.5 ],
+                [  0.5, -0.5,  0.5 ],
+                // left face
+                [ -0.5, -0.5, -0.5 ],
+                [ -0.5, -0.5,  0.5 ],
+                [ -0.5,  0.5,  0.5 ],
+                [ -0.5,  0.5, -0.5 ]
+            ],
+            indices: [
+                0, 1, 2, 0, 2, 3, // front face
+                4, 5, 6, 4, 6, 7, // back face
+                8, 9, 10, 8, 10, 11, // top face
+                12, 13, 14, 12, 14, 15, // bottom face
+                16, 17, 18, 16, 18, 19, // right face
+                20, 21, 22, 20, 22, 23  // left face
+            ]
+        };
     }
 
     function loadCubeMap( url ) {
@@ -406,17 +450,17 @@
         // only continue if WebGL is available
         if ( gl ) {
             // create camera
-            camera = new esper.Camera({
-                projection: {
-                    fov: FIELD_OF_VIEW,
-                    aspect: window.innerWidth / window.innerHeight,
-                    zMin: MIN_Z,
-                    zMax: MAX_Z
-                }
-            });
+            camera = new alfador.Transform();
+
+            // create projection
+            projection = new alfador.Mat44.perspective(
+                FIELD_OF_VIEW,
+                window.innerWidth / window.innerHeight,
+                MIN_Z,
+                MAX_Z );
+
             // create viewport
             viewport = new esper.Viewport();
-            viewport.resize( window.innerWidth, window.innerHeight );
 
             // create mouse and touch input handlers
             mouse = createFirstPersonMouse();
@@ -453,12 +497,12 @@
 
             // create the transforms
             transforms = {
-                fast: new esper.Transform(),
-                medium: new esper.Transform(),
-                slow: new esper.Transform()
+                fast: new alfador.Transform(),
+                medium: new alfador.Transform(),
+                slow: new alfador.Transform()
             };
 
-            var cube = new esper.Renderable( esper.Cube.geometry() );
+            var cube = new esper.Renderable( createCube() );
 
             // create stars
             STARS.forEach( function( star ) {

@@ -80,6 +80,7 @@
         "module"    : false,
         "$"         : false,
         "async"     : false,
+        "alfador"   : false,
         "rolypoly"  : false,
         "esper"     : false,
         "isMobile"  : false,
