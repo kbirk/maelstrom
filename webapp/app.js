@@ -462,7 +462,10 @@
                 MAX_Z );
 
             // create viewport
-            viewport = new esper.Viewport();
+            viewport = new esper.Viewport({
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
 
             // create mouse and touch input handlers
             mouse = createFirstPersonMouse();
