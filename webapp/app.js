@@ -81,35 +81,35 @@
     var touch;
     var viewport;
 
-    function fill( count, filler ) {
-        var arr = new Array( count );
-        for ( var i=0; i<count; i++ ) {
-            arr[i] = filler;
-        }
-        return arr;
-    }
-
     function initVertexBuffer( count ) {
-        // create filler array
-        var filler = fill( count, [ 0, 0, 0, 0 ] );
-        // create vertex buffer, this will be updated periodically
-        return new esper.VertexBuffer(
-            new esper.VertexPackage([
-                /**
-                 * x: x
-                 * y: y
-                 * y: z
-                 * w: rotation
-                 */
-                filler,
-                /**
-                 * x: red
-                 * y: green
-                 * y: blue
-                 * w: radius
-                 */
-                filler ])
-        );
+        var bufferSize =  count * 4 * 2;
+        // create vertex buffer, this will never be updated
+        return new esper.VertexBuffer( bufferSize, {
+            /**
+             * x: x
+             * y: y
+             * y: z
+             * w: rotation
+             */
+            0: {
+                size: 4,
+                type: 'FLOAT',
+                stride: 32,
+                offset: 0
+            },
+            /**
+             * x: red
+             * y: green
+             * y: blue
+             * w: radius
+             */
+            1: {
+                size: 4,
+                type: 'FLOAT',
+                stride: 32,
+                offset: 16
+            }
+        });
     }
 
     function createStarEntity( vertexBuffer, velocity, offset, count ) {
@@ -445,7 +445,9 @@
     window.startApplication = function() {
 
         // get WebGL context and loads all available extensions
-        gl = esper.WebGLContext.get( "glcanvas" );
+        gl = esper.WebGLContext.get( "glcanvas", {
+            depth: false
+        });
 
         // only continue if WebGL is available
         if ( gl ) {
