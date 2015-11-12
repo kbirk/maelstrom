@@ -4,6 +4,7 @@
 
     var gulp = require('gulp'),
         concat = require('gulp-concat'),
+        minifyHtml,
         bower,
         csso,
         filter,
@@ -68,7 +69,7 @@
     });
 
     gulp.task('build-min-html', function() {
-        var minifyHtml = require('gulp-minify-html');
+        minifyHtml = minifyHtml || require('gulp-minify-html');
         return gulp.src( paths.html )
             .pipe( minifyHtml() )
             .pipe( gulp.dest('build/html') );
@@ -76,8 +77,10 @@
 
     gulp.task('copy-index', function() {
         var replace = require('gulp-replace');
+        minifyHtml = minifyHtml || require('gulp-minify-html');
         return gulp.src( paths.index )
             .pipe( replace( /({{GOOGLE_ANALYTICS_ID}})/, process.env.GOOGLE_ANALYTICS_ID ) )
+            .pipe( minifyHtml() )
             .pipe( gulp.dest('build') );
     });
 
