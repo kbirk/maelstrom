@@ -13,14 +13,14 @@
                 callback();
                 return;
             }
-            elem.nodeValue = text.substring( 0, numLetters );
+            $text.text( text.substring( 0, numLetters ) );
             numLetters++;
             setTimeout( typeLetter, getTypingPause() );
         }
 
-        var elem = $elem.contents()[0],
+        var $text = $elem.children().first(),
             numLetters = 0;
-        typeLetter( elem, 0, callback );
+        typeLetter();
     }
 
     function getDeletingPause() {
@@ -34,14 +34,14 @@
                 callback();
                 return;
             }
-            elem.nodeValue = text.substring( 0, numLetters );
+            $text.text( text.substring( 0, numLetters ) );
             numLetters--;
             setTimeout( deleteLetter, getDeletingPause() );
         }
 
-        var elem = $elem.contents()[0],
+        var $text = $elem.children().first(),
             numLetters = text.length;
-            deleteLetter();
+        deleteLetter();
     }
 
     function getLongPause() {
@@ -54,10 +54,14 @@
 
     function animatedTyping( $elem, text ) {
 
+        console.log("ASdfasdf");
         function type( index ) {
+                console.log("tyyy");
             typeText( $elem, text[ index ], function() {
                 setTimeout( function() {
+                        console.log("deee");
                     deleteText( $elem, text[ index ], function() {
+                            console.log("again");
                         setTimeout( function() {
                             type( (index+1) % text.length );
                         }, getShortPause() );

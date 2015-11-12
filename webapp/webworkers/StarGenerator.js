@@ -26,18 +26,16 @@ var worker = this;
 
     function generateStars( buffer, bufferOffset, count, minRadius, maxRadius, colorSpectrum, progStart, progEnd, progIncrements ) {
         var STAR_MIN = 1,
-            STAR_MAX = 1000,
-            min = STAR_MIN,
-            range = ( STAR_MAX - STAR_MIN ),
+            STAR_MAX = 999,
+            STAR_RANGE = ( STAR_MAX - STAR_MIN ),
             progressMod = Math.round( count / progIncrements ),
             i;
         for ( i=0; i<count; i++ ) {
             var a = Math.random() > 0.5 ? 1 : -1,
                 b = Math.random() > 0.5 ? 1 : -1,
                 c = Math.random() > 0.5 ? 1 : -1,
-                epsilon = range * 0.1,
                 rand = randomLog(),
-                distance = ( min + epsilon ) +  rand * ( range - epsilon ),
+                distance = STAR_MIN + rand * STAR_RANGE,
                 radius = minRadius + ( maxRadius - minRadius ) * ( 1 - rand );
             var x = a * Math.random();
             var y = b * Math.random();
