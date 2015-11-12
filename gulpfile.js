@@ -75,7 +75,9 @@
     });
 
     gulp.task('copy-index', function() {
+        var replace = require('gulp-replace');
         return gulp.src( paths.index )
+            .pipe( replace( /({{GOOGLE_ANALYTICS_ID}})/, process.env.GOOGLE_ANALYTICS_ID ) )
             .pipe( gulp.dest('build') );
     });
 

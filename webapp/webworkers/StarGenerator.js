@@ -64,7 +64,7 @@ var worker = this;
     }
 
     function processBatches( batches ) {
-        var PROGRESS_INCREMENTS = 10;
+        var PROGRESS_INCREMENTS = 20;
         // determine total count
         var totalCount = 0;
         batches.forEach( function( batch ) {

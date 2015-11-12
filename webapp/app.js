@@ -183,7 +183,7 @@
     }
 
     window.addEventListener( 'resize', function() {
-        viewport.resize( window.innerWidth, window.innerHeight );
+        viewport.resize( $( window ).width(), $( window ).height() );
         projection = alfador.Mat44.perspective(
             FIELD_OF_VIEW,
             viewport.width / viewport.height,
@@ -457,14 +457,14 @@
             // create projection
             projection = new alfador.Mat44.perspective(
                 FIELD_OF_VIEW,
-                window.innerWidth / window.innerHeight,
+                $( window ).width() / $( window ).height(),
                 MIN_Z,
                 MAX_Z );
 
             // create viewport
             viewport = new esper.Viewport({
-                width: window.innerWidth,
-                height: window.innerHeight
+                width: $( window ).width(),
+                height: $( window ).height()
             });
 
             // create mouse and touch input handlers
@@ -533,7 +533,7 @@
                 });
             });
 
-            // typing effect
+            // add cursor to blinking element
             $('.blinking').text('_');
         }
     };

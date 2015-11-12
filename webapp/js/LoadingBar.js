@@ -9,7 +9,7 @@
 
     var LoadingBar = function() {
         this.percent = 0;
-        this.minDuration = 600;
+        this.minDuration = 1000;
         this.$loader = $('<div class="loader-bar"></div>');
         createContainer();
         $('.loader-container').append( this.$loader );
