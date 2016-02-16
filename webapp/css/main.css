@@ -14,9 +14,11 @@ body {
     font-family: 'Share Tech', sans-serif;
     font-weight: 400;
     color: #FFF;
-    -moz-user-select: none;
+    padding: 18px;
     -webkit-user-select: none;
-    -ms-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
     background-color: #000;
 }
 
@@ -34,13 +36,8 @@ canvas {
 header,
 main,
 footer {
-    position: absolute;
+    position: relative;
     width: 100%;
-    padding: 18px;
-}
-
-header {
-    top:0;
     line-height: 30pt;
     text-shadow: 3px 3px 0px rgba(0,0,0,0.8);
 }
@@ -48,7 +45,7 @@ header {
 header > h1 {
     font-size: 30pt;
 }
-header > h2 {
+main > h2 {
     font-size: 20pt;
     height: 40px;
 }
@@ -59,13 +56,14 @@ header > h2 {
     font-size: 24pt;
     color: #FFF;
     text-decoration: none;
-    transition: transform 0.15s ease-out;
     -webkit-transition: transform 0.15s ease-out;
-    -ms-transition: transform 0.15s ease-out;
+       -moz-transition: transform 0.15s ease-out;
+        -ms-transition: transform 0.15s ease-out;
+            transition: transform 0.15s ease-out;
 }
 
 .icon:hover {
-    transform: translate(0pt,2pt);
+    transform: translate(0pt, 2pt);
 }
 
 .left {

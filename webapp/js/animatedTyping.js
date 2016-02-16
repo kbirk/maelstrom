@@ -53,15 +53,10 @@
     }
 
     function animatedTyping( $elem, text ) {
-
-        console.log("ASdfasdf");
         function type( index ) {
-                console.log("tyyy");
             typeText( $elem, text[ index ], function() {
                 setTimeout( function() {
-                        console.log("deee");
                     deleteText( $elem, text[ index ], function() {
-                            console.log("again");
                         setTimeout( function() {
                             type( (index+1) % text.length );
                         }, getShortPause() );
@@ -69,7 +64,6 @@
                 }, getLongPause() );
             });
         }
-
         type( 0 );
     }
 
