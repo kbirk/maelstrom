@@ -6,29 +6,24 @@
   "dependencies": {
     "body-parser": "1.14.1",
     "compression": "1.6.0",
+    "express": "4.13.3"
+  },
+  "devDependencies": {
     "del": "2.0.2",
-    "express": "4.13.3",
-    "gulp": "3.9.0",
+    "gulp": "3.9.1",
     "gulp-concat": "2.6.0",
-    "gulp-csso": "1.0.1",
-    "gulp-filter": "3.0.1",
+    "gulp-csso": "1.1.0",
+    "gulp-filter": "4.0.0",
     "gulp-jshint": "1.12.0",
-    "gulp-minify-html": "1.0.4",
+    "gulp-minify-html": "1.0.6",
     "gulp-rename": "1.2.2",
     "gulp-replace": "0.5.4",
     "gulp-sourcemaps": "1.6.0",
-    "gulp-uglify": "1.4.2",
+    "gulp-uglify": "1.5.3",
     "jshint-stylish": "2.0.1",
-    "main-bower-files": "2.7.0",
+    "main-bower-files": "2.11.1",
     "run-sequence": "1.1.4",
     "vinyl-buffer": "1.0.0",
     "vinyl-source-stream": "1.1.0"
-  },
-  "devDependencies": {},
-  "scripts": {
-    "lint": "./node_modules/.bin/gulp lint",
-    "serve": "./node_modules/.bin/gulp serve",
-    "build": "./node_modules/.bin/gulp build",
-    "watch": "./node_modules/.bin/gulp watch"
   }
 }

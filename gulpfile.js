@@ -2,24 +2,55 @@
 
     "use strict";
 
-    var gulp = require('gulp'),
-        concat = require('gulp-concat'),
-        minifyHtml,
-        bower,
-        csso,
-        filter,
-        uglify;
+    var gulp = require('gulp');
+    var concat = require('gulp-concat');
+    var del = require('del');
+    var jshint = require('gulp-jshint');
+    var sourcemaps = require('gulp-sourcemaps');
+    var uglify = require('gulp-uglify');
+    var csso = require('gulp-csso');
+    var minifyHtml = require('gulp-minify-html');
+    var replace = require('gulp-replace');
+    var rename = require('gulp-rename');
+    var filter = require('gulp-filter');
+    var bower = require('main-bower-files');
+    var runSequence = require('run-sequence');
 
+    var project = 'maelstrom';
     var paths = {
-        js: [ 'webapp/js/**/*.js', 'webapp/app.js' ],
-        webworkers: [ 'webapp/webworkers/**/*js'],
-        css: [ 'webapp/css/reset.css', 'webapp/css/*.css' ],
-        fonts: [ 'webapp/**/*.eof', 'webapp/**/*.svg', 'webapp/**/*.ttf', 'webapp/**/*.woff', 'webapp/**/*.woff2', 'webapp/**/*.otf' ],
-        html: [ 'webapp/html/**/*.html' ],
-        index: [ 'webapp/index.html' ],
-        images: [ 'webapp/resources/images*/*.png' ],
-        favicons: [ 'webapp/favicons/*' ],
-        shaders: [ 'webapp/resources/shaders/*.vert', 'webapp/resources/shaders/*.frag' ]
+        js: [
+            'webapp/js/**/*.js',
+            'webapp/app.js' ],
+        webworkers: [
+            'webapp/webworkers/**/*js'
+        ],
+        css: [
+            'webapp/css/reset.css',
+            'webapp/css/*.css' ],
+        fonts: [
+            'webapp/**/*.eof',
+            'webapp/**/*.svg',
+            'webapp/**/*.ttf',
+            'webapp/**/*.woff',
+            'webapp/**/*.woff2',
+            'webapp/**/*.otf' ],
+        html: [
+            'webapp/html/**/*.html'
+        ],
+        index: [
+            'webapp/index.html'
+        ],
+        images: [
+            'webapp/resources/images*/*.png'
+        ],
+        favicons: [
+            'webapp/favicons/*'
+        ],
+        shaders: [
+            'webapp/resources/shaders/*.vert',
+            'webapp/resources/shaders/*.frag'
+        ],
+        build: 'build'
     };
 
     function handleError( err ){
@@ -28,111 +59,92 @@
     }
 
     gulp.task('clean', function () {
-        var del = require('del');
-       	del.sync([ 'build/*']);
+       	del.sync([ paths.build ]);
     });
 
     gulp.task('lint', function() {
-        var jshint = require('gulp-jshint');
-        return gulp.src( [ './webapp/**/*.js',
-            '!./webapp/vendor/**/*.js'] )
+        return gulp.src( paths.js )
             .pipe( jshint() )
             .pipe( jshint('.jshintrc') )
             .pipe( jshint.reporter('jshint-stylish') );
     });
 
     gulp.task('build-js', function() {
-        var sourcemaps = require('gulp-sourcemaps');
-        uglify = uglify || require('gulp-uglify');
         return gulp.src( paths.js )
             .pipe( sourcemaps.init() )
-            .pipe( concat('maelstrom.min.js') )
+            .pipe( concat( project + '.min.js') )
             .pipe( sourcemaps.write() )
-            .pipe( gulp.dest('build') );
+            .pipe( gulp.dest( paths.build ) );
     });
 
     gulp.task('build-min-js', function() {
-        uglify = uglify || require('gulp-uglify');
         return gulp.src( paths.js )
-            .pipe( concat('maelstrom.min.js') )
+            .pipe( concat( project + '.min.js') )
             .pipe( uglify().on('error', handleError ) )
-            .pipe( gulp.dest('build') );
+            .pipe( gulp.dest( paths.build ) );
     });
 
     gulp.task('build-min-css', function () {
-        csso = csso || require('gulp-csso');
-        var concat = require('gulp-concat');
         return gulp.src( paths.css )
             .pipe( csso() )
-            .pipe( concat('maelstrom.min.css') )
+            .pipe( concat( project + '.min.css' ) )
             .pipe( gulp.dest('build') );
     });
 
     gulp.task('build-min-html', function() {
-        minifyHtml = minifyHtml || require('gulp-minify-html');
         return gulp.src( paths.html )
             .pipe( minifyHtml() )
-            .pipe( gulp.dest('build/html') );
+            .pipe( gulp.dest( paths.build + '/html' ) );
     });
 
     gulp.task('copy-index', function() {
-        var replace = require('gulp-replace');
-        minifyHtml = minifyHtml || require('gulp-minify-html');
         return gulp.src( paths.index )
             .pipe( replace( /({{GOOGLE_ANALYTICS_ID}})/, process.env.GOOGLE_ANALYTICS_ID ) )
             .pipe( minifyHtml() )
-            .pipe( gulp.dest('build') );
+            .pipe( gulp.dest( paths.build ) );
     });
 
     gulp.task('copy-fonts', function() {
-        var rename = require('gulp-rename');
         return gulp.src( paths.fonts )
-            .pipe( rename({dirname: ''}) )
-            .pipe( gulp.dest('build/fonts') );
+            .pipe( rename({ dirname: '' }) )
+            .pipe( gulp.dest( paths.build + '/fonts' ) );
     });
 
     gulp.task('copy-webworkers', function() {
-        uglify = uglify || require('gulp-uglify');
         return gulp.src( paths.webworkers )
             .pipe( uglify().on('error', handleError ) )
-            .pipe( gulp.dest('build/webworkers/') );
+            .pipe( gulp.dest( paths.build + '/webworkers' ) );
     });
 
     gulp.task('copy-shaders', function() {
         return gulp.src( paths.shaders )
-            .pipe( gulp.dest('build/shaders/') );
+            .pipe( gulp.dest( paths.build + '/shaders') );
     });
 
     gulp.task('copy-images', function() {
         return gulp.src( paths.images )
-            .pipe( gulp.dest('build/') );
+            .pipe( gulp.dest( paths.build ) );
     });
 
     gulp.task('copy-favicons', function() {
         return gulp.src( paths.favicons )
-            .pipe( gulp.dest('build/') );
+            .pipe( gulp.dest( paths.build ) );
     });
 
     gulp.task('build-vendor-js', function() {
-        filter = filter || require('gulp-filter');
-        bower = bower || require('main-bower-files');
-        uglify = uglify || require('gulp-uglify');
         return gulp.src( bower() )
             .pipe( filter('**/*.js') ) // filter js files
             .pipe( concat('vendor.min.js') )
             .pipe( uglify() )
-            .pipe( gulp.dest('build/vendor') );
+            .pipe( gulp.dest( paths.build + '/vendor' ) );
     });
 
     gulp.task('build-vendor-css', function() {
-        filter = filter || require('gulp-filter');
-        bower = bower || require('main-bower-files');
-        csso = csso || require('gulp-csso');
         return gulp.src( bower() )
             .pipe( filter('**/*.css') ) // filter css files
             .pipe( csso() )
             .pipe( concat('vendor.min.css') )
-            .pipe( gulp.dest('build/vendor') );
+            .pipe( gulp.dest( paths.build + '/vendor' ) );
     });
 
     gulp.task('watch', function( done ) {
@@ -148,22 +160,22 @@
     });
 
     gulp.task('serve', function() {
-        var express = require( 'express' ),
-            bodyParser = require( 'body-parser' ),
-            compression = require( 'compression' ),
-            app = express();
+        var express = require( 'express' );
+        var bodyParser = require( 'body-parser' );
+        var compression = require( 'compression' );
+        var app = express();
+        var port = 8080;
         app.use( bodyParser.json() ); // support JSON-encoded bodies
         app.use( bodyParser.urlencoded({ extended: false }) ); // support URL-encoded bodies
         app.use( compression() );
-        app.use( express.static( __dirname + "/build/" ) );
-        app.listen( 8080, function() {
-            console.log( 'Listening on port %d', 8080 );
+        app.use( express.static( __dirname + '/' + paths.build  ) );
+        app.listen( port, function() {
+            console.log( 'Listening on port %d', port );
         });
         return app;
     });
 
     gulp.task('deploy', function( done ) {
-        var runSequence = require('run-sequence');
         runSequence(
             [
                 'clean',
@@ -186,7 +198,6 @@
     });
 
     gulp.task('build', function( done ) {
-        var runSequence = require('run-sequence');
         runSequence(
             [
                 'clean',
@@ -208,9 +219,12 @@
             done );
     });
 
-    gulp.task('default', function() {
-        var runSequence = require('run-sequence');
-        runSequence( ['build'], ['watch'], ['serve'] );
+    gulp.task('default', function( done ) {
+        runSequence(
+            [ 'build' ],
+            [ 'watch' ],
+            [ 'serve' ],
+            done );
     });
 
 }());

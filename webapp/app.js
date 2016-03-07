@@ -181,7 +181,9 @@
     }
 
     window.addEventListener( 'resize', function() {
-        viewport.resize( $( window ).width(), $( window ).height() );
+        var width = $( window ).width();
+        var height = $( window ).height();
+        viewport.resize( width, height );
         projection = alfador.Mat44.perspective(
             FIELD_OF_VIEW,
             viewport.width / viewport.height,
@@ -232,62 +234,6 @@
         var DEGREES_PER_MILLI = velocity / 1000,
             axis = [ 0.1, 1, 0.3 ];
         transform.rotateWorldDegrees( delta * DEGREES_PER_MILLI, axis );
-    }
-
-    function processFrame() {
-
-        time = new Date().getTime() - startTime;
-        delta = time - prevTime;
-
-        // update transforms
-        rotateTransform( transforms.fast, VELOCITY.FAST );
-        rotateTransform( transforms.medium, VELOCITY.MEDIUM );
-        rotateTransform( transforms.slow, VELOCITY.SLOW );
-
-        // fade everything in once it exists
-        staticStars.forEach( function( entity ) {
-            entity.opacity = Math.min( 1, entity.opacity + 0.01  );
-        });
-        nebulas.forEach( function( entity ) {
-            entity.opacity = Math.min( 1, entity.opacity + 0.01  );
-        });
-        stars.forEach( function( entity ) {
-            entity.opacity = Math.min( 1, entity.opacity + 0.01 );
-        });
-
-        // rotate camera based on current drag rotation
-        camera.rotateLocalDegrees( delta/10 * -verticalRotation, [ 0, 1, 0 ] );
-        camera.rotateLocalDegrees( delta/10 * horizontalRotation, [ 1, 0, 0 ] );
-
-        // update rotation velocity
-        verticalRotation = verticalRotation * ( 1 - ROTATION_FRICTION );
-        horizontalRotation = horizontalRotation * ( 1 - ROTATION_FRICTION );
-        if ( Math.abs( verticalRotation ) < 0.0001 ) {
-            verticalRotation = 0;
-        }
-        if ( Math.abs( horizontalRotation ) < 0.0001 ) {
-            horizontalRotation = 0;
-        }
-
-        // render frame
-        renderFrame();
-
-        // store last timestamp
-        prevTime = time;
-
-        // redraw when browser is ready
-        requestAnimationFrame( processFrame );
-    }
-
-    function renderFrame() {
-        // setup
-        viewport.push();
-        // render entities
-        renderCubeMaps( staticStars );
-        renderNebulas( nebulas );
-        renderStars( stars );
-        // teardown
-        viewport.pop();
     }
 
     function renderCubeMaps( entities ) {
@@ -348,6 +294,62 @@
         // teardown
         starTexture.pop( 0 );
         shaders.stars.pop();
+    }
+
+    function renderFrame() {
+        // setup
+        viewport.push();
+        // render entities
+        renderCubeMaps( staticStars );
+        renderNebulas( nebulas );
+        renderStars( stars );
+        // teardown
+        viewport.pop();
+    }
+
+    function processFrame() {
+
+        time = new Date().getTime() - startTime;
+        delta = time - prevTime;
+
+        // update transforms
+        rotateTransform( transforms.fast, VELOCITY.FAST );
+        rotateTransform( transforms.medium, VELOCITY.MEDIUM );
+        rotateTransform( transforms.slow, VELOCITY.SLOW );
+
+        // fade everything in once it exists
+        staticStars.forEach( function( entity ) {
+            entity.opacity = Math.min( 1, entity.opacity + 0.01  );
+        });
+        nebulas.forEach( function( entity ) {
+            entity.opacity = Math.min( 1, entity.opacity + 0.01  );
+        });
+        stars.forEach( function( entity ) {
+            entity.opacity = Math.min( 1, entity.opacity + 0.01 );
+        });
+
+        // rotate camera based on current drag rotation
+        camera.rotateLocalDegrees( delta/10 * -verticalRotation, [ 0, 1, 0 ] );
+        camera.rotateLocalDegrees( delta/10 * horizontalRotation, [ 1, 0, 0 ] );
+
+        // update rotation velocity
+        verticalRotation = verticalRotation * ( 1 - ROTATION_FRICTION );
+        horizontalRotation = horizontalRotation * ( 1 - ROTATION_FRICTION );
+        if ( Math.abs( verticalRotation ) < 0.0001 ) {
+            verticalRotation = 0;
+        }
+        if ( Math.abs( horizontalRotation ) < 0.0001 ) {
+            horizontalRotation = 0;
+        }
+
+        // render frame
+        renderFrame();
+
+        // store last timestamp
+        prevTime = time;
+
+        // redraw when browser is ready
+        requestAnimationFrame( processFrame );
     }
 
     function setInitialRenderingState() {
@@ -417,27 +419,28 @@
                     '-y': url + '_bottom4.png',
                     '+z': url + '_front5.png',
                     '-z': url + '_back6.png'
-                }
-            }, function( texture ) {
-                done( null, texture );
+                },
+                invertY: false
+            }, function( err, texture ) {
+                done( err, texture );
             });
         };
     }
 
     function loadShader( shader ) {
         return function( done ) {
-            new esper.Shader( shader, function( shader ) {
-                done( null, shader );
+            new esper.Shader( shader, function( err, shader ) {
+                done( err, shader );
             });
         };
     }
 
     function loadTexture( url ) {
         return function( done ) {
-            new esper.Texture2D({
+            new esper.ColorTexture2D({
                 url: url
-            }, function( texture ) {
-                done( null, texture );
+            }, function( err, texture ) {
+                done( err, texture );
             });
         };
     }
@@ -451,20 +454,24 @@
 
         // only continue if WebGL is available
         if ( gl ) {
+            // get window dimensions
+            var width = $( window ).width();
+            var height = $( window ).height();
+
             // create camera
             camera = new alfador.Transform();
 
             // create projection
             projection = new alfador.Mat44.perspective(
                 FIELD_OF_VIEW,
-                $( window ).width() / $( window ).height(),
+                width / height,
                 MIN_Z,
                 MAX_Z );
 
             // create viewport
             viewport = new esper.Viewport({
-                width: $( window ).width(),
-                height: $( window ).height()
+                width: width,
+                height: height
             });
 
             // create mouse and touch input handlers
@@ -481,6 +488,10 @@
                 'stars': loadShader( SHADERS.stars ),
                 'starTexture': loadTexture( STAR_TEXTURE.url )
             }, function( err, results ) {
+                if ( err ) {
+                    console.error( err );
+                    return;
+                }
                 // set results accordingly
                 shaders.cubeMap = results.cubeMap;
                 shaders.nebula = results.nebula;
@@ -512,6 +523,10 @@
             // create stars
             STARS.forEach( function( star ) {
                 loadCubeMap( star.url )( function( err, cubeMapTexture ) {
+                    if ( err ) {
+                        console.error( err );
+                        return;
+                    }
                     staticStars.push({
                         transform: transforms[ star.velocity ],
                         opacity: 0,
@@ -524,6 +539,10 @@
             // create nebulas
             NEBULAS.forEach( function( nebula ) {
                 loadCubeMap( nebula.url )( function( err, cubeMapTexture ) {
+                    if ( err ) {
+                        console.error( err );
+                        return;
+                    }
                     nebulas.push({
                         transform: transforms[ nebula.velocity ],
                         opacity: 0,
