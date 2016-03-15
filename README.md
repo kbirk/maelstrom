@@ -1,15 +1,21 @@
 # maelstrom
 
-### Installation
+### Dependencies
 
-Requires [node, npm](http://nodejs.org/).
+- Requires [node](http://nodejs.org/).
+- Requires [bower](http://bower.io/).
+- Requires [gulp](http://gulpjs.com/).
+
+### Installation
 
 ```bash
 npm install
+bower install
 ```
 
-Requires [bower](http://bower.io/).
+### Running
 
 ```bash
-bower install
+gulp deploy
+node server.js
 ```

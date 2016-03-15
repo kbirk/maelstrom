@@ -1,12 +1,15 @@
 ( function() {
 
-    "use strict";
+    'use strict';
 
     function getTypingPause() {
         return Math.random() * 100 + 100;
     }
 
     function typeText( $elem, text, callback ) {
+
+        var $text = $elem.children().first();
+        var numLetters = 0;
 
         function typeLetter() {
             if ( numLetters > text.length ) {
@@ -18,8 +21,6 @@
             setTimeout( typeLetter, getTypingPause() );
         }
 
-        var $text = $elem.children().first(),
-            numLetters = 0;
         typeLetter();
     }
 
@@ -28,6 +29,9 @@
     }
 
     function deleteText( $elem, text, callback ) {
+
+        var $text = $elem.children().first();
+        var numLetters = text.length;
 
         function deleteLetter() {
             if ( numLetters < 0 ) {
@@ -39,8 +43,6 @@
             setTimeout( deleteLetter, getDeletingPause() );
         }
 
-        var $text = $elem.children().first(),
-            numLetters = text.length;
         deleteLetter();
     }
 
@@ -67,6 +69,6 @@
         type( 0 );
     }
 
-    window.animatedTyping = animatedTyping;
+    module.exports = animatedTyping;
 
 }());

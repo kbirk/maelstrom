@@ -1,56 +1,46 @@
 ( function() {
 
-    "use strict";
+    'use strict';
 
     var gulp = require('gulp');
     var concat = require('gulp-concat');
+    var source = require('vinyl-source-stream');
+    var buffer = require('vinyl-buffer');
     var del = require('del');
     var jshint = require('gulp-jshint');
-    var sourcemaps = require('gulp-sourcemaps');
-    var uglify = require('gulp-uglify');
+    var browserify = require('browserify');
     var csso = require('gulp-csso');
-    var minifyHtml = require('gulp-minify-html');
+    var runSequence = require('run-sequence');
+    var uglify = require('gulp-uglify');
+    var htmlmin = require('gulp-htmlmin');
     var replace = require('gulp-replace');
     var rename = require('gulp-rename');
     var filter = require('gulp-filter');
     var bower = require('main-bower-files');
-    var runSequence = require('run-sequence');
 
     var project = 'maelstrom';
+    var basePath = 'webapp/';
     var paths = {
-        js: [
-            'webapp/js/**/*.js',
-            'webapp/app.js' ],
-        webworkers: [
-            'webapp/webworkers/**/*js'
-        ],
-        css: [
-            'webapp/css/reset.css',
-            'webapp/css/*.css' ],
+        root: basePath + 'app.js',
+        scripts: [ basePath + 'scripts/**/*.js',  basePath + 'app.js' ],
+        styles: [  basePath + 'styles/reset.css',  basePath + 'styles/**/*.css' ],
+        html: [ basePath + 'html/**/*.html' ],
+        index: [ basePath + 'index.html' ],
+        webworkers: [ basePath + 'webworkers/**/*.js' ],
         fonts: [
-            'webapp/**/*.eof',
-            'webapp/**/*.svg',
-            'webapp/**/*.ttf',
-            'webapp/**/*.woff',
-            'webapp/**/*.woff2',
-            'webapp/**/*.otf' ],
-        html: [
-            'webapp/html/**/*.html'
+            basePath + '**/*.eof',
+            basePath + '**/*.svg',
+            basePath + '**/*.ttf',
+            basePath + '**/*.woff',
+            basePath + '**/*.woff2',
+            basePath + '**/*.otf'
         ],
-        index: [
-            'webapp/index.html'
-        ],
-        images: [
-            'webapp/resources/images*/*.png'
-        ],
-        favicons: [
-            'webapp/favicons/*'
-        ],
-        shaders: [
-            'webapp/resources/shaders/*.vert',
-            'webapp/resources/shaders/*.frag'
-        ],
-        build: 'build'
+        build: 'build',
+        resources: [
+            basePath + 'images/**/*',
+            basePath + 'shaders/**/*',
+            basePath + 'favicons/**/*',
+        ]
     };
 
     function handleError( err ){
@@ -59,48 +49,64 @@
     }
 
     gulp.task('clean', function () {
-       	del.sync([ paths.build ]);
+        del.sync([ paths.build ]);
     });
 
     gulp.task('lint', function() {
-        return gulp.src( paths.js )
+        return gulp.src([
+                './webapp/**/*.js',
+                '!./webapp/vendor/**/*.js'
+            ])
             .pipe( jshint() )
             .pipe( jshint('.jshintrc') )
             .pipe( jshint.reporter('jshint-stylish') );
     });
 
-    gulp.task('build-js', function() {
-        return gulp.src( paths.js )
-            .pipe( sourcemaps.init() )
-            .pipe( concat( project + '.min.js') )
-            .pipe( sourcemaps.write() )
-            .pipe( gulp.dest( paths.build ) );
+    gulp.task('build-vendor-js', function() {
+        return gulp.src( bower() )
+            .pipe( filter('**/*.js') ) // filter js files
+            .pipe( concat('vendor.js') )
+            .pipe( uglify() )
+            .pipe( gulp.dest( paths.build + '/vendor' ) );
     });
 
-    gulp.task('build-min-js', function() {
-        return gulp.src( paths.js )
-            .pipe( concat( project + '.min.js') )
+    gulp.task('build-vendor-css', function() {
+        return gulp.src( bower() )
+            .pipe( filter('**/*.css') ) // filter css files
+            .pipe( csso() )
+            .pipe( concat('vendor.css') )
+            .pipe( gulp.dest( paths.build + '/vendor' ) );
+    });
+
+    gulp.task('build-scripts', function() {
+        return browserify( paths.root, {
+                debug: true,
+                standalone: project
+            }).bundle()
+            .on( 'error', handleError )
+            .pipe( source( project + '.js' ) )
+            .pipe( buffer() )
             .pipe( uglify().on('error', handleError ) )
             .pipe( gulp.dest( paths.build ) );
     });
 
-    gulp.task('build-min-css', function () {
-        return gulp.src( paths.css )
+    gulp.task('build-styles', function () {
+        return gulp.src( paths.styles )
             .pipe( csso() )
-            .pipe( concat( project + '.min.css' ) )
-            .pipe( gulp.dest('build') );
+            .pipe( concat( project + '.css') )
+            .pipe( gulp.dest( paths.build ) );
     });
 
-    gulp.task('build-min-html', function() {
+    gulp.task('build-html', function() {
         return gulp.src( paths.html )
-            .pipe( minifyHtml() )
+            .pipe( htmlmin({ collapseWhitespace: true }) )
             .pipe( gulp.dest( paths.build + '/html' ) );
     });
 
     gulp.task('copy-index', function() {
         return gulp.src( paths.index )
             .pipe( replace( /({{GOOGLE_ANALYTICS_ID}})/, process.env.GOOGLE_ANALYTICS_ID ) )
-            .pipe( minifyHtml() )
+            .pipe( htmlmin({ collapseWhitespace: true }) )
             .pipe( gulp.dest( paths.build ) );
     });
 
@@ -116,47 +122,30 @@
             .pipe( gulp.dest( paths.build + '/webworkers' ) );
     });
 
-    gulp.task('copy-shaders', function() {
-        return gulp.src( paths.shaders )
-            .pipe( gulp.dest( paths.build + '/shaders') );
-    });
-
-    gulp.task('copy-images', function() {
-        return gulp.src( paths.images )
+    gulp.task('copy-resources', function() {
+        return gulp.src( paths.resources, {
+                base: basePath
+            })
             .pipe( gulp.dest( paths.build ) );
     });
 
-    gulp.task('copy-favicons', function() {
-        return gulp.src( paths.favicons )
-            .pipe( gulp.dest( paths.build ) );
-    });
-
-    gulp.task('build-vendor-js', function() {
-        return gulp.src( bower() )
-            .pipe( filter('**/*.js') ) // filter js files
-            .pipe( concat('vendor.min.js') )
-            .pipe( uglify() )
-            .pipe( gulp.dest( paths.build + '/vendor' ) );
-    });
-
-    gulp.task('build-vendor-css', function() {
-        return gulp.src( bower() )
-            .pipe( filter('**/*.css') ) // filter css files
-            .pipe( csso() )
-            .pipe( concat('vendor.min.css') )
-            .pipe( gulp.dest( paths.build + '/vendor' ) );
-    });
-
-    gulp.task('watch', function( done ) {
-        gulp.watch( paths.js, [ 'build-js' ] );
-        gulp.watch( paths.css, ['build-min-css'] );
-        gulp.watch( paths.html, [ 'build-min-html' ] );
-        gulp.watch( paths.images, [ 'copy-images' ] );
-        gulp.watch( paths.index, [ 'copy-index' ] );
-        gulp.watch( paths.shaders, [ 'copy-shaders' ] );
-        gulp.watch( paths.favicons, [ 'copy-favicons' ] );
-        gulp.watch( paths.webworkers, [ 'copy-webworkers' ] );
-        done();
+    gulp.task('build', function( done ) {
+        runSequence(
+            [
+                'clean',
+                'lint' ],
+            [
+                'build-scripts',
+                'build-styles',
+                'build-html',
+                'build-vendor-js',
+                'build-vendor-css',
+                'copy-index',
+                'copy-fonts',
+                'copy-webworkers',
+                'copy-resources'
+            ],
+            done );
     });
 
     gulp.task('serve', function() {
@@ -175,53 +164,22 @@
         return app;
     });
 
-    gulp.task('deploy', function( done ) {
-        runSequence(
-            [
-                'clean',
-                'lint'
-            ],
-            [
-                'build-min-js',
-                'build-min-css',
-                'build-min-html',
-                'build-vendor-js',
-                'build-vendor-css',
-                'copy-webworkers',
-                'copy-index',
-                'copy-images',
-                'copy-shaders',
-                'copy-favicons',
-                'copy-fonts'
-            ],
-            done );
+    gulp.task('watch', [ 'build' ], function( done ) {
+        gulp.watch( paths.scripts, [ 'build-scripts' ] );
+        gulp.watch( paths.styles, [ 'build-styles' ] );
+        gulp.watch( paths.html, [ 'build-html' ] );
+        gulp.watch( paths.index, [ 'copy-index' ] );
+        gulp.watch( paths.fonts, [ 'copy-fonts' ] );
+        gulp.watch( paths.webworkers, [ 'copy-webworkers' ] );
+        gulp.watch( paths.resources, [ 'copy-resources' ] );
+        done();
     });
 
-    gulp.task('build', function( done ) {
-        runSequence(
-            [
-                'clean',
-                'lint'
-            ],
-            [
-                'build-js',
-                'build-min-css',
-                'build-min-html',
-                'build-vendor-js',
-                'build-vendor-css',
-                'copy-webworkers',
-                'copy-index',
-                'copy-images',
-                'copy-shaders',
-                'copy-favicons',
-                'copy-fonts'
-            ],
-            done );
+    gulp.task('deploy', [ 'build' ], function() {
     });
 
     gulp.task('default', function( done ) {
         runSequence(
-            [ 'build' ],
             [ 'watch' ],
             [ 'serve' ],
             done );

@@ -1,6 +1,15 @@
 ( function() {
 
-    "use strict";
+    'use strict';
+
+    var $ = require('jquery');
+    var async = require('async');
+    var esper = require('esper');
+    var alfador = require('alfador');
+    var rolypoly = require('rolypoly');
+    var isMobile = require('./scripts/isMobile');
+    var LoadingBar = require('./scripts/LoadingBar');
+    var animatedTyping = require('./scripts/animatedTyping');
 
     var FIELD_OF_VIEW = 60;
     var MIN_Z = 0.1;
@@ -25,46 +34,50 @@
         [0.2, 0.137, 0.262]
     ];
 
-    var IMAGES_DIR = IS_MOBILE ? 'images-mobile' : 'images-desktop';
+    var IMAGES_DIR = IS_MOBILE ? 'images/mobile' : 'images/desktop';
 
     var NEBULAS = [
         {
-            url: './' + IMAGES_DIR + '/cold',
+            url: IMAGES_DIR + '/cold',
+            ext: 'jpg',
             velocity: 'fast'
         },
         {
-            url: './' + IMAGES_DIR + '/hot',
+            url: IMAGES_DIR + '/hot',
+            ext: 'jpg',
             velocity: 'slow'
         }
     ];
     var STARS = [
         {
-            url: './images/cold_stars',
+            url: IMAGES_DIR + '/cold_stars',
+            ext: 'png',
             velocity: 'fast'
         }
     ];
     var STAR_TEXTURE = {
-        url: './images/star.png'
+        url: 'images/star',
+        ext: 'jpg'
     };
     var SHADERS = {
         cubeMap: {
-            vert: "./shaders/cubemap.vert",
-            frag: "./shaders/cubemap.frag"
+            vert: 'shaders/cubemap.vert',
+            frag: 'shaders/cubemap.frag'
         },
         stars: {
-            vert: "./shaders/point.vert",
-            frag: "./shaders/point.frag"
+            vert: 'shaders/point.vert',
+            frag: 'shaders/point.frag'
         },
         nebula: {
-            vert: "./shaders/nebula.vert",
-            frag: "./shaders/nebula.frag"
+            vert: 'shaders/nebula.vert',
+            frag: 'shaders/nebula.frag'
         }
     };
     var ROTATION_FRICTION = 0.03;
 
     var verticalRotation = 0;
     var horizontalRotation = 0;
-    var startTime = new Date().getTime();
+    var startTime = 0;
     var prevTime = 0;
     var time = 0;
     var delta = 0;
@@ -137,7 +150,7 @@
             colorSpectrum: FOREGROUND_STAR_SPECTRUM
         };
         var backgroundStars = {
-            count: 20000 * countFactor,
+            count: 40000 * countFactor,
             velocity: 'slow',
             minRadius: 3,
             maxRadius: 7,
@@ -409,24 +422,6 @@
         };
     }
 
-    function loadCubeMap( url ) {
-        return function( done ) {
-            new esper.TextureCubeMap({
-                urls: {
-                    '+x': url + '_right1.png',
-                    '-x': url + '_left2.png',
-                    '+y': url + '_top3.png',
-                    '-y': url + '_bottom4.png',
-                    '+z': url + '_front5.png',
-                    '-z': url + '_back6.png'
-                },
-                invertY: false
-            }, function( err, texture ) {
-                done( err, texture );
-            });
-        };
-    }
-
     function loadShader( shader ) {
         return function( done ) {
             new esper.Shader( shader, function( err, shader ) {
@@ -435,20 +430,38 @@
         };
     }
 
-    function loadTexture( url ) {
+    function loadCubeMap( url, ext ) {
         return function( done ) {
-            new esper.ColorTexture2D({
-                url: url
+            new esper.TextureCubeMap({
+                urls: {
+                    '+x': url + '_right1.' + ext,
+                    '-x': url + '_left2.' + ext,
+                    '+y': url + '_top3.' + ext,
+                    '-y': url + '_bottom4.' + ext,
+                    '+z': url + '_front5.' + ext,
+                    '-z': url + '_back6.' + ext
+                },
+                invertY: false
             }, function( err, texture ) {
                 done( err, texture );
             });
         };
     }
 
-    window.startApplication = function() {
+    function loadTexture( url, ext ) {
+        return function( done ) {
+            new esper.ColorTexture2D({
+                url: url + '.' + ext
+            }, function( err, texture ) {
+                done( err, texture );
+            });
+        };
+    }
+
+    window.start = function() {
 
         // get WebGL context and loads all available extensions
-        gl = esper.WebGLContext.get( "glcanvas", {
+        gl = esper.WebGLContext.get( 'glcanvas', {
             depth: false
         });
 
@@ -486,7 +499,7 @@
                 'cubeMap': loadShader( SHADERS.cubeMap ),
                 'nebula': loadShader( SHADERS.nebula ),
                 'stars': loadShader( SHADERS.stars ),
-                'starTexture': loadTexture( STAR_TEXTURE.url )
+                'starTexture': loadTexture( STAR_TEXTURE.url, STAR_TEXTURE.ext )
             }, function( err, results ) {
                 if ( err ) {
                     console.error( err );
@@ -507,6 +520,8 @@
                 }, 2000 );
                 // set initial state
                 setInitialRenderingState();
+                // get start time
+                startTime = new Date().getTime();
                 // initiate draw loop
                 processFrame();
             });
@@ -522,7 +537,7 @@
 
             // create stars
             STARS.forEach( function( star ) {
-                loadCubeMap( star.url )( function( err, cubeMapTexture ) {
+                loadCubeMap( star.url, star.ext )( function( err, cubeMapTexture ) {
                     if ( err ) {
                         console.error( err );
                         return;
@@ -538,7 +553,7 @@
 
             // create nebulas
             NEBULAS.forEach( function( nebula ) {
-                loadCubeMap( nebula.url )( function( err, cubeMapTexture ) {
+                loadCubeMap( nebula.url, nebula.ext )( function( err, cubeMapTexture ) {
                     if ( err ) {
                         console.error( err );
                         return;

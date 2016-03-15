@@ -1,5 +1,8 @@
 (function() {
+
     'use strict';
+
+    var $ = require('jquery');
 
     function createContainer() {
         if ( $('.loader-container').length === 0 ) {
@@ -54,6 +57,6 @@
             });
     };
 
-    window.LoadingBar = LoadingBar;
+    module.exports = LoadingBar;
 
 }());

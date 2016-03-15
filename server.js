@@ -1,6 +1,6 @@
 (function() {
 
-    "use strict";
+    'use strict';
 
     var express = require( 'express' );
     var bodyParser = require( 'body-parser' );
@@ -13,7 +13,7 @@
     app.use( bodyParser.json() ); // support JSON-encoded bodies
     app.use( bodyParser.urlencoded({ extended: false }) ); // support URL-encoded bodies
     app.use( compression() );
-    app.use( express.static( __dirname + "/build/" ) );
+    app.use( express.static( __dirname + '/build/' ) );
     app.listen( PORT, HOST, function() {
         console.log( 'Listening on port %d', PORT );
     });
