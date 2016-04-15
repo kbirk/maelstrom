@@ -81,13 +81,12 @@
 
     gulp.task('build-scripts', function() {
         return browserify( paths.root, {
-                debug: true,
                 standalone: project
             }).bundle()
             .on( 'error', handleError )
             .pipe( source( project + '.js' ) )
             .pipe( buffer() )
-            //.pipe( uglify().on('error', handleError ) )
+            .pipe( uglify().on('error', handleError ) )
             .pipe( gulp.dest( paths.build ) );
     });
 
