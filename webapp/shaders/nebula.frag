@@ -12,8 +12,8 @@ highp float noise( highp float a, highp float b ) {
     highp float SPEED = 0.75; // speed
     highp float timeOffset = uDelta + uIndex;
     return AMPL *
-        sin( ( a * ( 2.0 * 3.141 / PERIOD ) ) + ( timeOffset * SPEED ) ) *
-        cos( ( b * ( 2.0 * 3.141 / PERIOD ) ) + ( timeOffset * SPEED ) );
+        sin( ( a * ( 2.0 * 3.1415926 / PERIOD ) ) + ( timeOffset * SPEED ) ) *
+        cos( ( b * ( 2.0 * 3.1415926 / PERIOD ) ) + ( timeOffset * SPEED ) );
 }
 
 void main() {

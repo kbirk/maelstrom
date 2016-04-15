@@ -48,8 +48,9 @@
         this.emit('end');
     }
 
-    gulp.task('clean', function () {
-        del.sync([ paths.build ]);
+    gulp.task('clean', function( done ) {
+        del.sync( paths.build );
+        done();
     });
 
     gulp.task('lint', function() {
@@ -86,7 +87,7 @@
             .on( 'error', handleError )
             .pipe( source( project + '.js' ) )
             .pipe( buffer() )
-            .pipe( uglify().on('error', handleError ) )
+            //.pipe( uglify().on('error', handleError ) )
             .pipe( gulp.dest( paths.build ) );
     });
 

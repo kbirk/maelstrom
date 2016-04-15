@@ -9,11 +9,10 @@
     "express": "4.13.4"
   },
   "devDependencies": {
-    "alfador": "0.5.0",
     "async": "1.5.2",
     "browserify": "13.0.0",
     "del": "2.2.0",
-    "esper": "0.7.0",
+    "esper": "0.10.0",
     "gulp": "3.9.1",
     "gulp-concat": "2.6.0",
     "gulp-csso": "1.1.0",
@@ -27,7 +26,6 @@
     "jshint-stylish": "2.1.0",
     "lodash": "4.6.1",
     "main-bower-files": "2.11.1",
-    "rolypoly": "git@github.com:kbirk/rolypoly.git#0.4.2",
     "run-sequence": "1.1.5",
     "vinyl-buffer": "1.0.0",
     "vinyl-source-stream": "1.1.0"
