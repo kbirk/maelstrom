@@ -7,6 +7,6 @@ uniform highp mat4 uProjectionMatrix;
 varying highp vec3 vPosition;
 
 void main() {
-    gl_Position = uProjectionMatrix *  uViewMatrix * uModelMatrix * vec4( aVertexPosition, 1.0 );
+    gl_Position = uProjectionMatrix *  uViewMatrix * uModelMatrix * vec4(aVertexPosition, 1.0);
     vPosition = aVertexPosition.xyz;
 }

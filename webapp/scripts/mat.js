@@ -5,7 +5,7 @@
     var vec = require('./vec');
 
     function mat() {
-        var mat = new Float32Array( new ArrayBuffer( 16 * 4 ) );
+        var mat = new Float32Array(new ArrayBuffer(16 * 4));
         mat[0] = 1;
         mat[1] = 0;
         mat[2] = 0;
@@ -28,7 +28,7 @@
         return mat;
     }
 
-    function identity( mat ) {
+    function identity(mat) {
         mat[0] = 1;
         mat[1] = 0;
         mat[2] = 0;
@@ -51,29 +51,29 @@
         return mat;
     }
 
-    function axes( x, y, z, mat ) {
+    function axes(x, y, z, mat) {
         x[0] = mat[0];
         x[1] = mat[1];
         x[2] = mat[2];
-        vec.normalize( x );
+        vec.normalize(x);
         y[0] = mat[4];
         y[1] = mat[5];
         y[2] = mat[6];
-        vec.normalize( y );
+        vec.normalize(y);
         z[0] = mat[8];
         z[1] = mat[9];
         z[2] = mat[10];
-        vec.normalize( z );
+        vec.normalize(z);
     }
 
-    function rotation( out, angle, axis ) {
-        vec.normalize( axis );
+    function rotation(out, angle, axis) {
+        vec.normalize(axis);
         var x = axis[0];
         var y = axis[1];
         var z = axis[2];
-        var modAngle = ( angle > 0 ) ? angle % ( 2 * Math.PI ) : angle % ( -2 * Math.PI );
-        var s = Math.sin( modAngle );
-        var c = Math.cos( modAngle );
+        var modAngle = (angle > 0) ? angle % (2 * Math.PI) : angle % (-2 * Math.PI);
+        var s = Math.sin(modAngle);
+        var c = Math.cos(modAngle);
         var xx = x * x;
         var yy = y * y;
         var zz = z * z;
@@ -103,7 +103,7 @@
         return out;
     }
 
-    function multMat( out, a, b ) {
+    function multMat(out, a, b) {
         var a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
         var a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
         var a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
@@ -131,7 +131,7 @@
         return out;
     }
 
-    function multVec( out, mat, vec ) {
+    function multVec(out, mat, vec) {
         var x = vec[0];
         var y = vec[1];
         var z = vec[2];
@@ -141,11 +141,11 @@
         return out;
     }
 
-    function view( out, mat ) {
+    function view(out, mat) {
         var vx = vec.new();
         var vy = vec.new();
         var vz = vec.new();
-        axes( vx, vy, vz, mat );
+        axes(vx, vy, vz, mat);
 
         out[0] = vx[0];
         out[1] = vy[0];
@@ -169,9 +169,9 @@
         return out;
     }
 
-    function perspective( out, fovy, aspect, near, far ) {
-        var f = 1.0 / Math.tan( fovy / 2.0 );
-        var nf = 1.0 / ( near - far );
+    function perspective(out, fovy, aspect, near, far) {
+        var f = 1.0 / Math.tan(fovy / 2.0);
+        var nf = 1.0 / (near - far);
 
         out[0] = f / aspect;
         out[1] = 0;
@@ -185,23 +185,23 @@
 
         out[8] = 0;
         out[9] = 0;
-        out[10] = ( far + near ) * nf;
+        out[10] = (far + near) * nf;
         out[11] = -1;
 
         out[12] = 0;
         out[13] = 0;
-        out[14] = ( 2.0 * far * near ) * nf;
+        out[14] = (2.0 * far * near) * nf;
         out[15] = 0;
         return out;
     }
 
-    function rotateWorld( out, angle, axis ) {
-        var rot = rotation( mat(), angle, axis );
-        return multMat( out, rot, out );
+    function rotateWorld(out, angle, axis) {
+        var rot = rotation(mat(), angle, axis);
+        return multMat(out, rot, out);
     }
 
-    function rotateLocal( out, angle, axis ) {
-        return rotateWorld( out, angle, multVec( axis, out, axis ) );
+    function rotateLocal(out, angle, axis) {
+        return rotateWorld(out, angle, multVec(axis, out, axis));
     }
 
     module.exports = {
