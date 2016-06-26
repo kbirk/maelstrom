@@ -27,7 +27,7 @@
         [0.435, 0.247, 1],
         [0.647, 0.247, 1]
     ];
-    var FOREGROUND_STAR_COUNT = 10000;
+    var FOREGROUND_STAR_COUNT = 15000;
     var BACKGROUND_STAR_SPECTRUM = [
         [0.486, 0.023, 0.239],
         [0.352, 0.023, 0.286],
@@ -83,6 +83,8 @@
     var starTexture;
     var shaders = {};
     var transforms;
+
+    var canvas;
     var gl;
     var camera;
     var view;
@@ -118,14 +120,14 @@
         });
     }
 
-    function createStarEntity( vertexBuffer, velocity, byteOffset, count ) {
+    function createStarEntity( vertexBuffer, velocity, indexOffset, count ) {
         return {
             draw: function() {
                 vertexBuffer.bind();
                 vertexBuffer.draw({
                     mode: 'POINTS',
                     count: count,
-                    byteOffset: byteOffset
+                    indexOffset: indexOffset
                 });
                 vertexBuffer.unbind();
             },
@@ -191,8 +193,9 @@
     window.addEventListener( 'resize', function() {
         if ( viewport ) {
             // only resize if the viewport exists
-            var width = $( window ).width();
-            var height = $( window ).height();
+            var pixelRatio = window.devicePixelRatio;
+            var width = pixelRatio * window.innerWidth;
+            var height = pixelRatio * window.innerHeight;
             viewport.resize( width, height );
             projection = mat.perspective(
                 projection,
@@ -392,16 +395,19 @@
 
     window.start = function() {
 
+        canvas = document.getElementById('glcanvas');
+
         // get WebGL context and loads all available extensions
-        gl = esper.WebGLContext.get( 'glcanvas', {
+        gl = esper.WebGLContext.get( canvas, {
             depth: false
         });
 
         // only continue if WebGL is available
         if ( gl ) {
             // get window dimensions
-            var width = $( window ).width();
-            var height = $( window ).height();
+            var pixelRatio = window.devicePixelRatio;
+            var width = pixelRatio * window.innerWidth;
+            var height = pixelRatio * window.innerHeight;
 
             // create camera
             camera = new Camera();
