@@ -1,10 +1,12 @@
-attribute highp vec3 aVertexPosition;
+precision highp float;
 
-uniform highp mat4 uModelMatrix;
-uniform highp mat4 uViewMatrix;
-uniform highp mat4 uProjectionMatrix;
+attribute vec3 aVertexPosition;
 
-varying highp vec3 vPosition;
+uniform mat4 uModelMatrix;
+uniform mat4 uViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+varying vec3 vPosition;
 
 void main() {
     gl_Position = uProjectionMatrix *  uViewMatrix * uModelMatrix * vec4(aVertexPosition, 1.0);

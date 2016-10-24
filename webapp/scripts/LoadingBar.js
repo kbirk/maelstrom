@@ -1,30 +1,25 @@
-(function() {
+'use strict';
 
-    'use strict';
+const $ = require('jquery');
 
-    var $ = require('jquery');
-
-    function createContainer() {
-        if ($('.loader-container').length === 0) {
-            $(document.body).append($('<div class="loader-container"></div>'));
-        }
-    }
-
-    var LoadingBar = function() {
+class LoadingBar {
+    constructor() {
         this.percent = 0;
         this.minDuration = 1000;
+        this.last = Date.now();
         this.$loader = $('<div class="loader-bar"></div>');
-        createContainer();
-        $('.loader-container').append(this.$loader);
-    };
-
-    LoadingBar.prototype.update = function(percent) {
+        this.$container = $('<div class="loader-container"></div>');
+        this.$container.append(this.$loader);
+        $(document.body).append(this.$container);
+    }
+    update(percent) {
         if (this.percent <= percent) {
-            var diff = percent - this.percent;
+            const diff = percent - this.percent;
             this.percent = percent;
-            var timestamp = Date.now();
-            var delta = timestamp - this.last;
-            this.$loader.animate({
+            const timestamp = Date.now();
+            const delta = timestamp - this.last;
+            this.$loader.animate(
+                {
                     width: this.percent * 100 + '%',
                     opacity: 1.0 - (this.percent/2)
                 },
@@ -35,28 +30,27 @@
                 this.finish();
             }
         }
-    };
-
-    LoadingBar.prototype.finish = function() {
-        var that = this;
-        var diff = 1 - this.percent;
-        var timestamp = Date.now();
-        var delta = timestamp - this.last;
-        this.$loader.animate({
+    }
+    finish() {
+        const diff = 1 - this.percent;
+        const timestamp = Date.now();
+        const delta = timestamp - this.last;
+        this.$loader.animate(
+            {
                 width: '100%',
             },
             Math.max(delta, this.minDuration * diff),
             'linear');
-        this.$loader.animate({
+        this.$loader.animate(
+            {
                 opacity: 0
             },
             400,
-            function() {
-                that.$loader.remove();
-                that.$loader = null;
+            () => {
+                this.$loader.remove();
+                this.$loader = null;
             });
-    };
+    }
+}
 
-    module.exports = LoadingBar;
-
-}());
+module.exports = LoadingBar;

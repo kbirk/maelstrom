@@ -1,7 +1,9 @@
-uniform samplerCube uCubeMapSampler;
-uniform highp float uOpacity;
+precision highp float;
 
-varying highp vec3 vPosition;
+uniform samplerCube uCubeMapSampler;
+uniform float uOpacity;
+
+varying vec3 vPosition;
 
 void main() {
     gl_FragColor = vec4(textureCube(uCubeMapSampler, vPosition).rgb, uOpacity);
