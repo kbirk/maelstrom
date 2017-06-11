@@ -10,7 +10,7 @@ const LoadingBar = require('./scripts/LoadingBar');
 const animatedTyping = require('./scripts/animatedTyping');
 const Camera = require('./scripts/Camera');
 
-const FIELD_OF_VIEW = 60 * (Math.PI / 180);
+const FIELD_OF_VIEW = 60.0 * (Math.PI / 180);
 const MIN_Z = 0.1;
 const MAX_Z = 1000;
 const VELOCITY = {
@@ -25,7 +25,7 @@ const FOREGROUND_STAR_SPECTRUM = [
     [0.435, 0.247, 1],
     [0.647, 0.247, 1]
 ];
-const FOREGROUND_STAR_COUNT = 15000;
+const FOREGROUND_STAR_COUNT = 20000;
 const BACKGROUND_STAR_SPECTRUM = [
     [0.486, 0.023, 0.239],
     [0.352, 0.023, 0.286],
@@ -35,19 +35,19 @@ const BACKGROUND_STAR_COUNT = 30000;
 const IMAGES_DIR = IS_MOBILE ? 'images/mobile' : 'images/desktop';
 const NEBULAS = [
     {
-        url: IMAGES_DIR + '/cold',
+        url: `${IMAGES_DIR}/cold`,
         ext: 'jpg',
         velocity: 'fast'
     },
     {
-        url: IMAGES_DIR + '/hot',
+        url: `${IMAGES_DIR}/hot`,
         ext: 'jpg',
         velocity: 'slow'
     }
 ];
 const STARS = [
     {
-        url: IMAGES_DIR + '/cold_stars',
+        url: `${IMAGES_DIR}/cold_stars`,
         ext: 'png',
         velocity: 'fast'
     }
@@ -241,8 +241,8 @@ function renderNebulaCubeMaps(entities) {
 function renderStars(entities) {
     // setup
     shaders.stars.use();
-    shaders.stars.setUniform('uPointSampler', 0);
     shaders.stars.setUniform('uDelta', time / 1000);
+    shaders.stars.setUniform('uPointSampler', 0);
     // set camera uniforms
     shaders.stars.setUniform('uProjectionMatrix', projection);
     shaders.stars.setUniform('uViewMatrix', view);
@@ -281,7 +281,7 @@ function renderFrame() {
 }
 
 function incrementOpacity(entity) {
-    entity.opacity = Math.min(1, entity.opacity + 0.01 );
+    entity.opacity = Math.min(1, entity.opacity + 0.01);
 }
 
 function processFrame() {
@@ -447,9 +447,7 @@ function createCube() {
 
 function loadShader(src) {
     return done => {
-        return new esper.Shader(src, (err, shader) => {
-            done(err, shader);
-        });
+        return new esper.Shader(src, done);
     };
 }
 
@@ -457,27 +455,23 @@ function loadCubeMap(url, ext) {
     return done => {
         return new esper.TextureCubeMap({
             faces: {
-                '+x': url + '_right1.' + ext,
-                '-x': url + '_left2.' + ext,
-                '+y': url + '_top3.' + ext,
-                '-y': url + '_bottom4.' + ext,
-                '+z': url + '_front5.' + ext,
-                '-z': url + '_back6.' + ext
+                '+x': `${url}_right1.${ext}`,
+                '-x': `${url}_left2.${ext}`,
+                '+y': `${url}_top3.${ext}`,
+                '-y': `${url}_bottom4.${ext}`,
+                '+z': `${url}_front5.${ext}`,
+                '-z': `${url}_back6.${ext}`
             },
             invertY: false
-        }, (err, texture) => {
-            done(err, texture);
-        });
+        }, done);
     };
 }
 
 function loadTexture(url, ext) {
     return done => {
         return new esper.ColorTexture2D({
-            src: url + '.' + ext
-        }, (err, texture) => {
-            done(err, texture);
-        });
+            src: `${url}.${ext}`
+        }, done);
     };
 }
 

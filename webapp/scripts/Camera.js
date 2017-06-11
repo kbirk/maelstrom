@@ -1,17 +1,21 @@
 'use strict';
 
 const mat = require('./mat');
+const vec = require('./vec');
 
 const ROTATION_FRICTION = 0.03;
 const DESKTOP_FACTOR = 10000;
-const MOBILE_FACTOR = -5000;
+const MOBILE_FACTOR = 5000;
 const EPSILON = 0.00001;
+const DEGREES_TO_RADIANS = Math.PI / 180.0;
+const X_AXIS = vec.new(1, 0, 0);
+const Y_AXIS = vec.new(0, 1, 0);
 
 class Camera {
     constructor() {
         this.horizontalRotation = 0;
         this.verticalRotation = 0;
-        this.transform = mat.rotateWorld(mat.new(), Math.PI, [ 0, 1, 0 ]);
+        this.transform = mat.rotateWorld(mat.new(), Math.PI, Y_AXIS);
         this.view = mat.new();
         let prevX;
         let prevY;
@@ -62,16 +66,14 @@ class Camera {
         });
     }
     applyRotation(tDelta) {
-        const xAxis = [ 1, 0, 0 ];
-        const yAxis = [ 0, 1, 0 ];
         // rotate camera based on current drag rotation
-        mat.rotateLocal(this.transform, tDelta * -this.horizontalRotation * (Math.PI / 180), yAxis);
-        mat.rotateLocal(this.transform, tDelta * -this.verticalRotation * (Math.PI / 180), xAxis);
+        mat.rotateLocal(this.transform, tDelta * this.horizontalRotation * DEGREES_TO_RADIANS, Y_AXIS);
+        mat.rotateLocal(this.transform, tDelta * this.verticalRotation * DEGREES_TO_RADIANS, X_AXIS);
     }
     applyFriction() {
         // update rotation velocity
-        this.verticalRotation = this.verticalRotation * (1 - ROTATION_FRICTION);
-        this.horizontalRotation = this.horizontalRotation * (1 - ROTATION_FRICTION);
+        this.verticalRotation *= (1 - ROTATION_FRICTION);
+        this.horizontalRotation *= (1 - ROTATION_FRICTION);
         if (Math.abs(this.verticalRotation) < EPSILON) {
             this.verticalRotation = 0;
         }

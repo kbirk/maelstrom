@@ -2,11 +2,11 @@
 
 module.exports = {
 
-    new: function(x, y, z) {
+    new: function(x = 0, y = 0, z = 0) {
         const vec = new Float32Array(3);
-        vec[0] = x !== undefined ? x : 0;
-        vec[1] = y !== undefined ? y : 0;
-        vec[2] = z !== undefined ? z : 0;
+        vec[0] = x;
+        vec[1] = y;
+        vec[2] = z;
         return vec;
     },
 
@@ -14,10 +14,10 @@ module.exports = {
         const x = vec[0];
         const y = vec[1];
         const z = vec[2];
-        const len = (x * x) + (y * y) + (z * z);
-        vec[0] = x / len;
-        vec[1] = y / len;
-        vec[2] = z / len;
+        const inverseLen = 1 / ((x * x) + (y * y) + (z * z));
+        vec[0] = x * inverseLen;
+        vec[1] = y * inverseLen;
+        vec[2] = z * inverseLen;
         return vec;
     }
 

@@ -185,7 +185,8 @@ function rotateWorld(out, angle, axis) {
 }
 
 function rotateLocal(out, angle, axis) {
-    return rotateWorld(out, angle, multVec(axis, out, axis));
+    const temp = vec.new();
+    return rotateWorld(out, angle, multVec(temp, out, axis));
 }
 
 module.exports = {
