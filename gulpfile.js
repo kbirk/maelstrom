@@ -2,14 +2,12 @@
 
 const babel = require('gulp-babel');
 const babelify = require('babelify');
-const bower = require('main-bower-files');
 const browserify = require('browserify');
 const buffer = require('vinyl-buffer');
 const concat = require('gulp-concat');
 const csso = require('gulp-csso');
 const eslint = require('gulp-eslint');
 const del = require('del');
-const filter = require('gulp-filter');
 const gulp = require('gulp');
 const htmlmin = require('gulp-htmlmin');
 const rename = require('gulp-rename');
@@ -20,31 +18,55 @@ const uglify = require('gulp-uglify');
 
 const project = 'maelstrom';
 const basePath = 'webapp';
+const fontAwesome = 'node_modules/font-awesome';
 const paths = {
     root: `${basePath}/app.js`,
-    scripts: [ `${basePath}/scripts/**/*.js`, `${basePath}/app.js` ],
-    styles: [ `${basePath}/styles/reset.css`, `${basePath}/styles/**/*.css` ],
-    html: [ `${basePath}/html/**/*.html` ],
-    index: [ `${basePath}/index.html` ],
-    webworkers: [ `${basePath}/webworkers/**/*.js` ],
-    fonts: [
-        `${basePath}/**/*.eof`,
-        `${basePath}/**/*.svg`,
-        `${basePath}/**/*.ttf`,
-        `${basePath}/**/*.woff`,
-        `${basePath}/**/*.woff2`,
-        `${basePath}/**/*.otf`
+    scripts: [
+        `${basePath}/scripts/**/*.js`,
+        `${basePath}/app.js` ],
+    styles: [
+        `${basePath}/styles/reset.css`,
+        `${basePath}/styles/**/*.css`,
+        `${fontAwesome}/css/font-awesome.css`
     ],
-    build: 'build',
+    html: [
+        `${basePath}/html/**/*.html`
+    ],
+    index: [
+        `${basePath}/index.html`
+    ],
+    webworkers: [
+        `${basePath}/webworkers/**/*.js`
+    ],
+    fonts: [
+        `${basePath}/fonts/*.ttf`,
+        `${fontAwesome}/fonts/*.eof`,
+        `${fontAwesome}/fonts/*.svg`,
+        `${fontAwesome}/fonts/*.ttf`,
+        `${fontAwesome}/fonts/*.woff`,
+        `${fontAwesome}/fonts/*.woff2`,
+        `${fontAwesome}/fonts/*.otf`
+    ],
     resources: [
         `${basePath}/images/**/*`,
         `${basePath}/shaders/**/*`,
-        `${basePath}/favicons/**/*`,
-    ]
+        `${basePath}/favicons/**/*`
+    ],
+    build: 'build',
 };
 
-function handleError(err){
-    console.log(err);
+function logError(err) {
+    if (err instanceof SyntaxError) {
+        console.error('Syntax Error:');
+        console.error(err.message);
+        console.error(err.codeFrame);
+    } else {
+        console.error(err.message);
+    }
+}
+
+function handleError(err) {
+    logError(err);
     this.emit('end');
 }
 
@@ -53,28 +75,9 @@ gulp.task('clean', () => {
 });
 
 gulp.task('lint', () => {
-	return gulp.src([
-            './webapp/**/*.js',
-            '!./webapp/vendor/**/*.js'
-        ])
+    return gulp.src(paths.scripts)
         .pipe(eslint())
         .pipe(eslint.format());
-});
-
-gulp.task('build-vendor-js', () => {
-    return gulp.src(bower())
-        .pipe(filter('**/*.js')) // filter js files
-        .pipe(concat('vendor.js'))
-        .pipe(uglify())
-        .pipe(gulp.dest(`${paths.build}/vendor`));
-});
-
-gulp.task('build-vendor-css', () => {
-    return gulp.src(bower())
-        .pipe(filter('**/*.css')) // filter css files
-        .pipe(csso())
-        .pipe(concat('vendor.css'))
-        .pipe(gulp.dest(`${paths.build}/vendor`));
 });
 
 gulp.task('build-scripts', () => {
@@ -85,7 +88,7 @@ gulp.task('build-scripts', () => {
             global: true,
             compact: true,
             presets: [
-                'es2015'
+                [ 'es2015', { modules: false } ]
             ]
         })
         .bundle()
@@ -126,7 +129,7 @@ gulp.task('copy-webworkers', () => {
     return gulp.src(paths.webworkers)
         .pipe(babel({
             presets: [
-                'es2015-script'
+                [ 'es2015', { modules: false } ]
             ]
         }))
         .pipe(uglify().on('error', handleError))
@@ -150,8 +153,6 @@ gulp.task('build', done => {
             'build-scripts',
             'build-styles',
             'build-html',
-            'build-vendor-js',
-            'build-vendor-css',
             'copy-index',
             'copy-fonts',
             'copy-webworkers',
