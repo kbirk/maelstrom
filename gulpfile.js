@@ -99,6 +99,18 @@ gulp.task('build-scripts', () => {
         .pipe(gulp.dest(paths.build));
 });
 
+gulp.task('build-scripts-dev', () => {
+    return browserify(paths.root, {
+            debug: true,
+            standalone: project
+        })
+        .bundle()
+        .on('error', handleError)
+        .pipe(source(`${project}.js`))
+        .pipe(buffer())
+        .pipe(gulp.dest(paths.build));
+});
+
 gulp.task('build-styles', () => {
     return gulp.src(paths.styles)
         .pipe(csso())
@@ -136,11 +148,34 @@ gulp.task('copy-webworkers', () => {
         .pipe(gulp.dest(`${paths.build}/webworkers`));
 });
 
+gulp.task('copy-webworkers-dev', () => {
+    return gulp.src(paths.webworkers)
+        .pipe(gulp.dest(`${paths.build}/webworkers`));
+});
+
 gulp.task('copy-resources', () => {
     return gulp.src(paths.resources, {
             base: basePath
         })
         .pipe(gulp.dest(paths.build));
+});
+
+gulp.task('build-dev', done => {
+    runSequence(
+        [
+            'clean',
+            'lint'
+        ],
+        [
+            'build-scripts-dev',
+            'build-styles',
+            'build-html',
+            'copy-index',
+            'copy-fonts',
+            'copy-webworkers-dev',
+            'copy-resources'
+        ],
+        done);
 });
 
 gulp.task('build', done => {
@@ -174,23 +209,23 @@ gulp.task('serve', () => {
     return app;
 });
 
-gulp.task('watch', [ 'build' ], done => {
-    gulp.watch(paths.scripts, [ 'build-scripts' ]);
+gulp.task('watch', [ 'build-dev' ], done => {
+    gulp.watch(paths.scripts, [ 'build-scripts-dev' ]);
     gulp.watch(paths.styles, [ 'build-styles' ]);
     gulp.watch(paths.html, [ 'build-html' ]);
     gulp.watch(paths.index, [ 'copy-index' ]);
     gulp.watch(paths.fonts, [ 'copy-fonts' ]);
-    gulp.watch(paths.webworkers, [ 'copy-webworkers' ]);
+    gulp.watch(paths.webworkers, [ 'copy-webworkers-dev' ]);
     gulp.watch(paths.resources, [ 'copy-resources' ]);
     done();
 });
 
-gulp.task('deploy', [ 'build' ], () => {
-});
-
-gulp.task('default', done => {
+gulp.task('dev', done => {
     runSequence(
         [ 'watch' ],
         [ 'serve' ],
         done);
+});
+
+gulp.task('default', [ 'dev' ], () => {
 });

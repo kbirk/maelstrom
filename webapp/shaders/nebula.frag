@@ -7,15 +7,16 @@ uniform float uIndex;
 
 varying vec3 vPosition;
 
-#define AMPL   0.004 // height of the ripples
-#define PERIOD 0.15  // spacing of the ripples
-#define SPEED  0.75  // speed of ripples
+#define AMPL        0.004 // height of the ripples
+#define PERIOD      0.15  // spacing of the ripples
+#define SPEED       0.75  // speed of ripples
+#define TAU_PERIOD  (2.0 * 3.1415926 / PERIOD) // tau divided by the period
 
 float noise(float a, float b) {
     float timeOffset = uDelta + uIndex;
     return AMPL *
-        sin((a * (2.0 * 3.1415926 / PERIOD)) + (timeOffset * SPEED)) *
-        cos((b * (2.0 * 3.1415926 / PERIOD)) + (timeOffset * SPEED));
+        sin((a * TAU_PERIOD) + (timeOffset * SPEED)) *
+        cos((b * TAU_PERIOD) + (timeOffset * SPEED));
 }
 
 void main() {
