@@ -1,7 +1,7 @@
 precision highp float;
 
-attribute vec3 aPosition;
-attribute vec4 aColorAndRadius;
+attribute vec4 aPositionAndRadius;
+attribute vec4 aColorAndRotation;
 
 uniform mat4 uModelMatrix;
 uniform mat4 uViewMatrix;
@@ -16,12 +16,13 @@ float rand(vec3 p){
 
 void main() {
     // set color
-    vColor = aColorAndRadius.rgb;
+    vColor = aColorAndRotation.rgb;
     // radius
-    float radius = aColorAndRadius.w;
+    vec3 position = aPositionAndRadius.xyz;
+    float radius = aPositionAndRadius.w;
     // set the size of the point
-    float fluctuation = (sin(uDelta * length(aPosition) / 300.0 + rand(aPosition)) + 1.0) / 2.0;
+    float fluctuation = (sin(uDelta * length(position) / 300.0 + rand(position)) + 1.0) / 2.0;
     gl_PointSize = radius + (radius * fluctuation);
     // set position
-    gl_Position = uProjectionMatrix *  uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
+    gl_Position = uProjectionMatrix *  uViewMatrix * uModelMatrix * vec4(position, 1.0);
 }

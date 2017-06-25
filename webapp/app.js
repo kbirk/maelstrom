@@ -3,21 +3,24 @@
 const $ = require('jquery');
 const parallel = require('async/parallel');
 const esper = require('esper');
-const vec = require('./scripts/vec');
-const mat = require('./scripts/mat');
+const vec3 = require('./scripts/math/vec3');
+const mat4 = require('./scripts/math/mat4');
 const isMobile = require('./scripts/isMobile');
 const LoadingBar = require('./scripts/LoadingBar');
 const animatedTyping = require('./scripts/animatedTyping');
+const Transform = require('./scripts/Transform');
 const Camera = require('./scripts/Camera');
 
-const FIELD_OF_VIEW = 60.0 * (Math.PI / 180);
+const DEGREES_TO_RADIANS = (Math.PI / 180.0);
+const FIELD_OF_VIEW = 60.0 * DEGREES_TO_RADIANS;
 const MIN_Z = 0.1;
-const MAX_Z = 1000;
+const MAX_Z = 1000.0;
 const VELOCITY = {
     SLOW: 1,
     MEDIUM: 1.1,
     FAST: 1.2
 };
+const ROTATION_AXIS = vec3.new(0.0953463, 0.953463, 0.286039);
 const IS_MOBILE = isMobile();
 const FOREGROUND_STAR_SPECTRUM = [
     [0.247, 0.698, 1],
@@ -100,7 +103,7 @@ function initVertexBuffer(count) {
          * x: x
          * y: y
          * y: z
-         * w: rotation
+         * w: radius
          */
         0: {
             size: 4,
@@ -111,7 +114,7 @@ function initVertexBuffer(count) {
          * x: red
          * y: green
          * y: blue
-         * w: radius
+         * w: rotation
          */
         1: {
             size: 4,
@@ -189,7 +192,7 @@ window.addEventListener('resize', function() {
         const width = pixelRatio * window.innerWidth;
         const height = pixelRatio * window.innerHeight;
         viewport.resize(width, height);
-        projection = mat.perspective(
+        projection = mat4.perspective(
             projection,
             FIELD_OF_VIEW,
             viewport.width / viewport.height,
@@ -199,9 +202,9 @@ window.addEventListener('resize', function() {
 });
 
 function rotateTransform(transform, velocity) {
-    const RADIANS_PER_MILLI = (velocity / 1000) * (Math.PI / 180);
-    const axis = vec.new(0.1, 1, 0.3);
-    return mat.rotateWorld(transform, delta * RADIANS_PER_MILLI, axis);
+    const RADIANS_PER_MILLI = (velocity / 1000) * DEGREES_TO_RADIANS;
+    transform.rotate(ROTATION_AXIS, delta * RADIANS_PER_MILLI);
+    transform.calcMatrix();
 }
 
 function renderStarCubeMaps(entities) {
@@ -213,7 +216,7 @@ function renderStarCubeMaps(entities) {
     shaders.cubeMap.setUniform('uViewMatrix', view);
     // for each entity
     entities.forEach(entity => {
-        shaders.cubeMap.setUniform('uModelMatrix', entity.transform);
+        shaders.cubeMap.setUniform('uModelMatrix', entity.transform.matrix);
         shaders.cubeMap.setUniform('uOpacity', entity.opacity);
         entity.texture.bind(0);
         cubeBuffer.draw();
@@ -230,7 +233,7 @@ function renderNebulaCubeMaps(entities) {
     shaders.nebula.setUniform('uViewMatrix', view);
     // for each entity
     entities.forEach((entity, index) => {
-        shaders.nebula.setUniform('uModelMatrix', entity.transform);
+        shaders.nebula.setUniform('uModelMatrix', entity.transform.matrix);
         shaders.nebula.setUniform('uOpacity', entity.opacity);
         shaders.nebula.setUniform('uIndex', index);
         entity.texture.bind(0);
@@ -249,7 +252,7 @@ function renderStars(entities) {
     starTexture.bind(0);
     // for each entity
     entities.forEach(entity => {
-        shaders.stars.setUniform('uModelMatrix', entity.transform);
+        shaders.stars.setUniform('uModelMatrix', entity.transform.matrix);
         shaders.stars.setUniform('uOpacity', entity.opacity);
         starBuffer.draw({
             mode: 'POINTS',
@@ -495,8 +498,8 @@ window.start = function() {
         camera = new Camera();
 
         // create projection
-        projection = mat.perspective(
-            mat.new(),
+        projection = mat4.perspective(
+            mat4.new(),
             FIELD_OF_VIEW,
             width / height,
             MIN_Z,
@@ -512,9 +515,9 @@ window.start = function() {
         cubeBuffer = createCube();
 
         // create the transforms
-        transforms.fast = mat.new();
-        transforms.medium = mat.new();
-        transforms.slow = mat.new();
+        transforms.fast = new Transform();
+        transforms.medium = new Transform();
+        transforms.slow = new Transform();
 
         // generate stars
         generateStars();

@@ -1,30 +1,34 @@
 'use strict';
 
-const mat = require('./mat');
-const vec = require('./vec');
+const Transform = require('./Transform');
 
 const ROTATION_FRICTION = 0.03;
 const DESKTOP_FACTOR = 10000;
 const MOBILE_FACTOR = 5000;
 const EPSILON = 0.00001;
 const DEGREES_TO_RADIANS = Math.PI / 180.0;
-const X_AXIS = vec.new(1, 0, 0);
-const Y_AXIS = vec.new(0, 1, 0);
 
-class Camera {
+function isLeftButton(event) {
+	return event.which ? event.which === 1 : event.button === 0;
+}
+
+class Camera extends Transform {
     constructor() {
+        super();
         this.horizontalRotation = 0;
         this.verticalRotation = 0;
-        this.transform = mat.rotateWorld(mat.new(), Math.PI, Y_AXIS);
-        this.view = mat.new();
+        // turn 180 initially
+        this.rotateY(Math.PI);
         let prevX;
         let prevY;
         let down;
         // add mouse down handler
         document.addEventListener('mousedown', event => {
-            prevX = event.screenX;
-            prevY = event.screenY;
-            down = true;
+            if (isLeftButton(event)) {
+                prevX = event.screenX;
+                prevY = event.screenY;
+                down = true;
+            }
         });
         // add mouse move handler
         document.addEventListener('mousemove', event => {
@@ -39,9 +43,11 @@ class Camera {
         });
         // add mouse up handler
         document.addEventListener('mouseup', () => {
-            down = false;
-            prevX = undefined;
-            prevY = undefined;
+            if (isLeftButton(event)) {
+                down = false;
+                prevX = undefined;
+                prevY = undefined;
+            }
         });
         // add touch start handler
         document.addEventListener('touchmove', event => {
@@ -67,8 +73,8 @@ class Camera {
     }
     applyRotation(tDelta) {
         // rotate camera based on current drag rotation
-        mat.rotateLocal(this.transform, tDelta * this.horizontalRotation * DEGREES_TO_RADIANS, Y_AXIS);
-        mat.rotateLocal(this.transform, tDelta * this.verticalRotation * DEGREES_TO_RADIANS, X_AXIS);
+        this.rotateX(tDelta * this.verticalRotation * DEGREES_TO_RADIANS);
+        this.rotateY(tDelta * this.horizontalRotation * DEGREES_TO_RADIANS);
     }
     applyFriction() {
         // update rotation velocity
@@ -83,7 +89,8 @@ class Camera {
     }
     getViewMatrix() {
         // get view matrix
-        return mat.view(this.view, this.transform);
+        this.calcView();
+        return this.view;
     }
 }
 

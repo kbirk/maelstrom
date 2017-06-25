@@ -45,15 +45,15 @@ function generateStars(buffer, bufferOffset, count, minRadius, maxRadius, colorS
         buffer[offset] = x * inverseDistance; // x
         buffer[offset+1] = y * inverseDistance; // y
         buffer[offset+2] = z * inverseDistance; // z
-        // generate a random rotation
-        buffer[offset+3] = Math.random() * TAU; // rotation
+        buffer[offset+3] = Math.round(radius); // radius
         // get a random color from the spectrum
         getColorInSpectrum(color, Math.random(), colorSpectrum);
         // copy color values
         buffer[offset+4] = color[0]; // r
         buffer[offset+5] = color[1]; // g
         buffer[offset+6] = color[2]; // b
-        buffer[offset+7] = Math.round(radius); // radius
+        // generate a random rotation
+        buffer[offset+7] = Math.random() * TAU; // rotation
         // post progress to window
         if ((i + 1) % progressMod === 0) {
             const prog = (i + 1) / count;
