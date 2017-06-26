@@ -38,7 +38,7 @@ function multiply(out, a, b) {
     out[1] = ay * bw + aw * by + az * bx - ax * bz;
     out[2] = az * bw + aw * bz + ax * by - ay * bx;
     out[3] = aw * bw - ax * bx - ay * by - az * bz;
-    return out;
+    return normalize(out);
 };
 
 function rotation(out, axis, angle) {
@@ -49,7 +49,7 @@ function rotation(out, axis, angle) {
     out[1] = s * axis[1];
     out[2] = s * axis[2];
     out[3] = Math.cos(angle);
-    return out;
+    return normalize(out);
 }
 
 function rotate(out, q, axis, angle) {
@@ -69,7 +69,7 @@ function rotateX(out, a, rad) {
     out[1] = ay * bw + az * bx;
     out[2] = az * bw - ay * bx;
     out[3] = aw * bw - ax * bx;
-    return out;
+    return normalize(out);
 }
 
 function rotateY(out, a, rad) {
@@ -84,7 +84,7 @@ function rotateY(out, a, rad) {
     out[1] = ay * bw + aw * by;
     out[2] = az * bw + ax * by;
     out[3] = aw * bw - ay * by;
-    return out;
+    return normalize(out);
 }
 
 function rotateZ(out, a, rad) {
@@ -99,7 +99,7 @@ function rotateZ(out, a, rad) {
     out[1] = ay * bw - ax * bz;
     out[2] = az * bw + aw * bz;
     out[3] = aw * bw - az * bz;
-    return out;
+    return normalize(out);
 }
 
 function matrix(out, q) {
@@ -190,6 +190,22 @@ function view(out, q) {
     return out;
 }
 
+function normalize(out) {
+    const x = out[0];
+    const y = out[1];
+    const z = out[2];
+    const w = out[3];
+    const len = (x * x) + (y * y) + (z * z) + (w * w);
+    if (len > 0) {
+        const invLen = 1 / Math.sqrt(len);
+        out[0] = x * invLen;
+        out[1] = y * invLen;
+        out[2] = z * invLen;
+        out[3] = w * invLen;
+    }
+    return out;
+}
+
 module.exports = {
     new: quat,
     identity: identity,
@@ -200,5 +216,6 @@ module.exports = {
     rotateZ: rotateZ,
     axes: axes,
     matrix: matrix,
-    view: view
+    view: view,
+    normalize: normalize
 };
