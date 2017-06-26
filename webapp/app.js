@@ -38,7 +38,7 @@ const BACKGROUND_STAR_SPECTRUM = [
     [0.2, 0.137, 0.262]
 ];
 const BACKGROUND_STAR_MIN_RADIUS = 3;
-const BACKGROUND_STAR_MAX_RADIUS = 7;
+const BACKGROUND_STAR_MAX_RADIUS = 9;
 const BACKGROUND_STAR_COUNT = 30000;
 const IMAGES_DIR = IS_MOBILE ? 'images/mobile' : 'images/desktop';
 const NEBULAS = [
@@ -209,7 +209,7 @@ window.addEventListener('resize', function() {
 });
 
 function rotateTransform(transform, velocity) {
-    const RADIANS_PER_MILLI = (velocity / 1000) * DEGREES_TO_RADIANS;
+    const RADIANS_PER_MILLI = (velocity / 1000.0) * DEGREES_TO_RADIANS;
     transform.rotate(ROTATION_AXIS, delta * RADIANS_PER_MILLI);
     transform.calcMatrix();
 }
@@ -233,7 +233,7 @@ function renderStarCubeMaps(entities) {
 function renderNebulaCubeMaps(entities) {
     // before
     shaders.nebula.use();
-    shaders.nebula.setUniform('uDelta', time / 1000);
+    shaders.nebula.setUniform('uDelta', time / 1000.0);
     shaders.nebula.setUniform('uCubeMapSampler', 0);
     // set camera uniforms
     shaders.nebula.setUniform('uProjectionMatrix', projection);
@@ -251,7 +251,7 @@ function renderNebulaCubeMaps(entities) {
 function renderStars(entities) {
     // setup
     shaders.stars.use();
-    shaders.stars.setUniform('uDelta', time / 1000);
+    shaders.stars.setUniform('uDelta', time / 1000.0);
     shaders.stars.setUniform('uPointSampler', 0);
     // set camera uniforms
     shaders.stars.setUniform('uProjectionMatrix', projection);
@@ -291,7 +291,10 @@ function renderFrame() {
 }
 
 function incrementOpacity(entity) {
-    entity.opacity = Math.min(1, entity.opacity + 0.01);
+    entity.opacity += 0.01;
+    if (entity.opacity > 1.0) {
+        entity.opacity = 1.0;
+    }
 }
 
 function processFrame() {
@@ -381,6 +384,11 @@ window.start = function() {
 
     canvas = document.getElementById('glcanvas');
 
+    // prevent right-click context menu
+    document.addEventListener('contextmenu', event => {
+        event.preventDefault();
+    });
+
     // get WebGL context and loads all available extensions
     gl = esper.WebGLContext.get(canvas, {
         depth: false
@@ -468,7 +476,7 @@ window.start = function() {
             });
         });
 
-        // create nebulaMaps
+        // create nebulas
         NEBULAS.forEach(nebula => {
             loadCubeMap(nebula.url, nebula.ext)((err, cubeMapTexture) => {
                 if (err) {

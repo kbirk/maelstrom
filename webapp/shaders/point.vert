@@ -10,19 +10,24 @@ uniform float uDelta;
 
 varying vec3 vColor;
 
-float rand(vec3 p){
-    return fract(sin(dot(p.xyx , vec3(12.9898, 78.233, 45.2341))) * 43758.5453) * 1000.0;
+#define TAU                6.28318530718
+#define FLUCTUATION_FACTOR 10.0
+
+float rand(vec3 p) {
+    return fract(sin(dot(p.xyx, vec3(12.9898, 78.233, 45.2341))) * 43758.5453) * TAU;
+}
+
+float fluctuation(float radius, vec3 pos) {
+    return (sin(uDelta * (FLUCTUATION_FACTOR / sqrt(radius)) + rand(pos)) + 1.0) * 0.5;
 }
 
 void main() {
-    // set color
-    vColor = aColorAndRotation.rgb;
-    // radius
-    vec3 position = aPositionAndRadius.xyz;
+    vec3 pos = aPositionAndRadius.xyz;
     float radius = aPositionAndRadius.w;
     // set the size of the point
-    float fluctuation = (sin(uDelta * length(position) / 300.0 + rand(position)) + 1.0) / 2.0;
-    gl_PointSize = radius + (radius * fluctuation);
+    gl_PointSize = radius + (radius * fluctuation(radius, pos));
     // set position
-    gl_Position = uProjectionMatrix *  uViewMatrix * uModelMatrix * vec4(position, 1.0);
+    gl_Position = uProjectionMatrix *  uViewMatrix * uModelMatrix * vec4(pos, 1.0);
+    // set color
+    vColor = aColorAndRotation.rgb;
 }
