@@ -3,13 +3,14 @@
 const $ = require('jquery');
 const parallel = require('async/parallel');
 const esper = require('esper');
-const vec3 = require('./scripts/math/vec3');
 const mat4 = require('./scripts/math/mat4');
+const vec3 = require('./scripts/math/vec3');
+const cube = require('./scripts/geometry/cube');
 const isMobile = require('./scripts/isMobile');
 const LoadingBar = require('./scripts/LoadingBar');
 const animatedTyping = require('./scripts/animatedTyping');
-const Transform = require('./scripts/Transform');
 const Camera = require('./scripts/Camera');
+const Transform = require('./scripts/Transform');
 
 const DEGREES_TO_RADIANS = (Math.PI / 180.0);
 const FIELD_OF_VIEW = 60.0 * DEGREES_TO_RADIANS;
@@ -28,12 +29,16 @@ const FOREGROUND_STAR_SPECTRUM = [
     [0.435, 0.247, 1],
     [0.647, 0.247, 1]
 ];
+const FOREGROUND_STAR_MIN_RADIUS = 5;
+const FOREGROUND_STAR_MAX_RADIUS = 100;
 const FOREGROUND_STAR_COUNT = 20000;
 const BACKGROUND_STAR_SPECTRUM = [
     [0.486, 0.023, 0.239],
     [0.352, 0.023, 0.286],
     [0.2, 0.137, 0.262]
 ];
+const BACKGROUND_STAR_MIN_RADIUS = 3;
+const BACKGROUND_STAR_MAX_RADIUS = 7;
 const BACKGROUND_STAR_COUNT = 30000;
 const IMAGES_DIR = IS_MOBILE ? 'images/mobile' : 'images/desktop';
 const NEBULAS = [
@@ -124,11 +129,11 @@ function initVertexBuffer(count) {
     });
 }
 
-function createStarEntity(velocity, indexOffset, count) {
+function createStarEntity(transform, indexOffset, count) {
     return {
         count: count,
         indexOffset: indexOffset,
-        transform: transforms[velocity],
+        transform: transform,
         opacity: 0
     };
 }
@@ -138,19 +143,21 @@ function generateStars() {
     const countFactor = IS_MOBILE ? 0.5 : 1;
     const foregroundStars = {
         count: FOREGROUND_STAR_COUNT * countFactor,
-        velocity: 'medium',
-        minRadius: 5,
-        maxRadius: 100,
+        velocity: transforms.medium,
+        minRadius: FOREGROUND_STAR_MIN_RADIUS,
+        maxRadius: FOREGROUND_STAR_MAX_RADIUS,
         colorSpectrum: FOREGROUND_STAR_SPECTRUM
     };
     const backgroundStars = {
         count: BACKGROUND_STAR_COUNT * countFactor,
-        velocity: 'slow',
-        minRadius: 3,
-        maxRadius: 7,
+        velocity: transforms.slow,
+        minRadius: BACKGROUND_STAR_MIN_RADIUS,
+        maxRadius: BACKGROUND_STAR_MAX_RADIUS,
         colorSpectrum: BACKGROUND_STAR_SPECTRUM
     };
-    starBuffer = initVertexBuffer(backgroundStars.count + foregroundStars.count);
+    starBuffer = initVertexBuffer(
+        backgroundStars.count +
+        foregroundStars.count);
     // create web worker to generate particles
     const worker = new Worker('webworkers/StarGenerator.js');
     worker.addEventListener('message', event => {
@@ -181,7 +188,7 @@ function generateStars() {
         batches: [
             foregroundStars,
             backgroundStars
-        ]
+       ]
     });
 }
 
@@ -329,115 +336,7 @@ function setInitialRenderingState() {
 }
 
 function createCube() {
-    const vertices = new Float32Array(108);
-    vertices[0] = -0.5;
-    vertices[1] = -0.5;
-    vertices[2] = 0.5;
-    vertices[3] = 0.5;
-    vertices[4] = -0.5;
-    vertices[5] = 0.5;
-    vertices[6] = 0.5;
-    vertices[7] = 0.5;
-    vertices[8] = 0.5;
-    vertices[9] = -0.5;
-    vertices[10] = -0.5;
-    vertices[11] = 0.5;
-    vertices[12] = 0.5;
-    vertices[13] = 0.5;
-    vertices[14] = 0.5;
-    vertices[15] = -0.5;
-    vertices[16] = 0.5;
-    vertices[17] = 0.5;
-    vertices[18] = 0.5;
-    vertices[19] = -0.5;
-    vertices[20] = -0.5;
-    vertices[21] = -0.5;
-    vertices[22] = -0.5;
-    vertices[23] = -0.5;
-    vertices[24] = -0.5;
-    vertices[25] = 0.5;
-    vertices[26] = -0.5;
-    vertices[27] = 0.5;
-    vertices[28] = -0.5;
-    vertices[29] = -0.5;
-    vertices[30] = -0.5;
-    vertices[31] = 0.5;
-    vertices[32] = -0.5;
-    vertices[33] = 0.5;
-    vertices[34] = 0.5;
-    vertices[35] = -0.5;
-    vertices[36] = -0.5;
-    vertices[37] = 0.5;
-    vertices[38] = 0.5;
-    vertices[39] = 0.5;
-    vertices[40] = 0.5;
-    vertices[41] = 0.5;
-    vertices[42] = 0.5;
-    vertices[43] = 0.5;
-    vertices[44] = -0.5;
-    vertices[45] = -0.5;
-    vertices[46] = 0.5;
-    vertices[47] = 0.5;
-    vertices[48] = 0.5;
-    vertices[49] = 0.5;
-    vertices[50] = -0.5;
-    vertices[51] = -0.5;
-    vertices[52] = 0.5;
-    vertices[53] = -0.5;
-    vertices[54] = 0.5;
-    vertices[55] = -0.5;
-    vertices[56] = 0.5;
-    vertices[57] = -0.5;
-    vertices[58] = -0.5;
-    vertices[59] = 0.5;
-    vertices[60] = -0.5;
-    vertices[61] = -0.5;
-    vertices[62] = -0.5;
-    vertices[63] = 0.5;
-    vertices[64] = -0.5;
-    vertices[65] = 0.5;
-    vertices[66] = -0.5;
-    vertices[67] = -0.5;
-    vertices[68] = -0.5;
-    vertices[69] = 0.5;
-    vertices[70] = -0.5;
-    vertices[71] = -0.5;
-    vertices[72] = -0.5;
-    vertices[73] = -0.5;
-    vertices[74] = -0.5;
-    vertices[75] = -0.5;
-    vertices[76] = -0.5;
-    vertices[77] = 0.5;
-    vertices[78] = -0.5;
-    vertices[79] = 0.5;
-    vertices[80] = 0.5;
-    vertices[81] = -0.5;
-    vertices[82] = -0.5;
-    vertices[83] = -0.5;
-    vertices[84] = -0.5;
-    vertices[85] = 0.5;
-    vertices[86] = 0.5;
-    vertices[87] = -0.5;
-    vertices[88] = 0.5;
-    vertices[89] = -0.5;
-    vertices[90] = 0.5;
-    vertices[91] = -0.5;
-    vertices[92] = 0.5;
-    vertices[93] = 0.5;
-    vertices[94] = -0.5;
-    vertices[95] = -0.5;
-    vertices[96] = 0.5;
-    vertices[97] = 0.5;
-    vertices[98] = -0.5;
-    vertices[99] = 0.5;
-    vertices[100] = -0.5;
-    vertices[101] = 0.5;
-    vertices[102] = 0.5;
-    vertices[103] = 0.5;
-    vertices[104] = -0.5;
-    vertices[105] = 0.5;
-    vertices[106] = 0.5;
-    vertices[107] = 0.5;
+    const vertices = cube.positions();
     return new esper.VertexBuffer(vertices, {
         0: {
             size: 3,
@@ -544,7 +443,7 @@ window.start = function() {
                     'is a software engineer',
                     'lives in toronto, ontario',
                     'works at uncharted software'
-                ]);
+               ]);
             }, 2000);
             // set initial state
             setInitialRenderingState();
@@ -562,7 +461,7 @@ window.start = function() {
                     return;
                 }
                 starMaps.push({
-                    transform: transforms[ star.velocity ],
+                    transform: transforms[star.velocity],
                     texture: cubeMapTexture,
                     opacity: 0
                 });
@@ -577,7 +476,7 @@ window.start = function() {
                     return;
                 }
                 nebulaMaps.push({
-                    transform: transforms[ nebula.velocity ],
+                    transform: transforms[nebula.velocity],
                     texture: cubeMapTexture,
                     opacity: 0
                 });
