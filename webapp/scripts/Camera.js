@@ -42,7 +42,7 @@ class Camera extends Transform {
             }
         });
         // add mouse up handler
-        document.addEventListener('mouseup', () => {
+        document.addEventListener('mouseup', event => {
             if (isLeftButton(event)) {
                 down = false;
                 prevX = undefined;
