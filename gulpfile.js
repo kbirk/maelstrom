@@ -1,7 +1,6 @@
 'use strict';
 
 const babel = require('gulp-babel');
-const babelify = require('babelify');
 const browserify = require('browserify');
 const buffer = require('vinyl-buffer');
 const concat = require('gulp-concat');
@@ -12,9 +11,9 @@ const gulp = require('gulp');
 const htmlmin = require('gulp-htmlmin');
 const rename = require('gulp-rename');
 const replace = require('gulp-replace');
+const uglify = require('gulp-uglify');
 const runSequence = require('run-sequence');
 const source = require('vinyl-source-stream');
-const uglify = require('gulp-uglify');
 
 const project = 'maelstrom';
 const basePath = 'webapp';
@@ -84,18 +83,21 @@ gulp.task('build-scripts', () => {
     return browserify(paths.root, {
             debug: false,
             standalone: project
-        }).transform(babelify, {
+        })
+        .transform('babelify', {
             global: true,
             compact: true,
             presets: [
-                [ 'es2015', { modules: false } ]
+                [ '@babel/preset-env', { modules: false } ]
             ]
+        })
+        .transform('uglifyify', {
+            global: true
         })
         .bundle()
         .on('error', handleError)
         .pipe(source(`${project}.js`))
         .pipe(buffer())
-        .pipe(uglify().on('error', handleError))
         .pipe(gulp.dest(paths.build));
 });
 
@@ -141,7 +143,7 @@ gulp.task('copy-webworkers', () => {
     return gulp.src(paths.webworkers)
         .pipe(babel({
             presets: [
-                [ 'es2015', { modules: false } ]
+                [ '@babel/preset-env', { modules: false } ]
             ]
         }))
         .pipe(uglify().on('error', handleError))

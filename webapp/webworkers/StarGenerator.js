@@ -2,7 +2,7 @@
 
 const worker = this;
 
-const TAU = Math.PI;
+const TAU = Math.PI * 2.0;
 
 function getColorInSpectrum(color, nval, gradient) {
     const segment = 1 / (gradient.length - 1);
