@@ -64,7 +64,7 @@ class Camera extends Transform {
             this.verticalRotation += dy / MOBILE_FACTOR;
             prevX = touch.clientX;
             prevY = touch.clientY;
-        });
+        }, { passive: false });
         // add touch end handler
         document.addEventListener('touchend', () => {
             prevX = undefined;
