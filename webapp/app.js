@@ -61,7 +61,7 @@ const STARS = [
     }
 ];
 const STAR_TEXTURE = {
-    url: 'images/star',
+    url: `${IMAGES_DIR}/star`,
     ext: 'jpg'
 };
 const SHADERS = {
@@ -450,7 +450,7 @@ window.start = function() {
                 animatedTyping($('.typing'), [
                     'is a software engineer',
                     'lives in toronto, ontario',
-                    'works at uncharted software'
+                    'is employed at thinkdata works'
                ]);
             }, 2000);
             // set initial state

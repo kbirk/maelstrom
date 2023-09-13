@@ -2,6 +2,7 @@
 
 ### Dependencies
 
+- Requires [golang](https://go.dev/).
 - Requires [node](http://nodejs.org/).
 - Requires [gulp](http://gulpjs.com/).
 
@@ -14,12 +15,13 @@ npm install
 ### Development
 
 ```bash
-gulp dev
+./node_modules/.bin/gulp dev
 ```
 
 ### Deployment
 
 ```bash
-gulp build
-node server.js
+./node_modules/.bin/gulp build
+go build main.go
+./main
 ```

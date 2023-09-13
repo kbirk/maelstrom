@@ -47,7 +47,8 @@ const paths = {
         `${fontAwesome}/fonts/*.otf`
     ],
     resources: [
-        `${basePath}/images/**/*`,
+        `${basePath}/images/desktop/*`,
+        `${basePath}/images/mobile/*`,
         `${basePath}/shaders/**/*`,
         `${basePath}/favicons/**/*`
     ],

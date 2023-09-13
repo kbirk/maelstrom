@@ -1,11 +1,9 @@
 {
   "name": "maelstrom",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "author": "Kevin Birk <birk.kevin@gmail.com>",
   "dependencies": {
-    "compression": "^1.7.3",
-    "express": "^4.16.3"
   },
   "devDependencies": {
     "@babel/core": "^7.1.0",
@@ -30,5 +28,8 @@
     "uglifyify": "^5.0.1",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0"
+  },
+  "overrides": {
+    "graceful-fs": "^4.2.11"
   }
 }
